@@ -10,6 +10,15 @@ At any moment it answers: **Where am I? What should I be doing now? What happens
 - **HISTORY**: finished runs with a 1–5 result, defects, notes, a planned-vs-actual timeline, a comparison table, and JSON export/import.
 - **Settings (⚙)**: individually switchable alerts, keep-screen-awake, profile editor (stages, timings, temperatures, wording, evidence levels), and full backup/restore.
 
+## Built-in profiles
+
+| Profile | Burnout | Notes |
+|---|---|---|
+| **Protocast / True Blue / CZ121 — 5-hour fast burnout (R14-LPB)** *(default)* | 220 °C 15+45 min → 450 °C 15+45 min → 730 °C 20+150 min → cool to 550 °C → 60 min soak | For small (~25 mm) models with strong kiln extraction. The 730 °C / 2.5 h peak is below the Protocast datasheet's 750 °C / 4 h; the app shows both figures and flags it. |
+| Protocast / True Blue / CZ121 — Initial | Protocast datasheet *Typical Resin Burnout* | 220 °C 90+180 → 450 °C 120+120 → 750 °C 180+240 → 525 °C → 60 min soak |
+
+Both profiles include a **kiln controller programme** (C/t segment format) generated from their stages. It appears on the *flask into kiln* step and on the RUN screen.
+
 ## Principles
 
 - **Nothing process-specific is hard-coded.** Every temperature and duration comes from an editable profile. Each value carries its evidence level (*manufacturer* / *working* / *experimental*). Changing a datasheet value automatically marks it as *working*.

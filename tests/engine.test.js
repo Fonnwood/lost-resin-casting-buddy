@@ -321,3 +321,41 @@ test('import normalises partial profiles', () => {
   assert.throws(() => P.normalise({}));
   assert.equal(U.hms(3599000), '00:59:59');
 });
+
+test('5-hour fast profile: timings, datasheet refs and minimum warnings', () => {
+  const p = P.fastProfile();
+  const kiln = p.stages.filter((s) => s.control === 'kiln');
+  assert.deepEqual(kiln.map((s) => [s.targetC, s.minutes]), [[220, 15], [220, 45], [450, 15], [450, 45], [730, 20], [730, 150]]);
+  assert.equal(kiln.reduce((a, s) => a + s.minutes, 0), 290, 'burnout segments total 4 h 50 min');
+  const peak = P.byRole(p, 'peak_hold');
+  assert.ok(peak.minutes < peak.minMinutes, 'peak hold is below the datasheet minimum and must be flagged');
+  assert.equal(peak.ref.minutes, 240);
+  assert.equal(P.summary(p).flaskCastingTempC, 550);
+  assert.equal(P.byRole(p, 'set').minutes, 90);
+  assert.equal(P.byRole(p, 'soak').minutes, 60);
+  assert.notEqual(p.id, P.defaultProfile().id);
+});
+
+test('kiln controller programme writes holds as Cn = Cn+1', () => {
+  const k = P.kilnProgram(P.fastProfile());
+  const v = Object.fromEntries(k.rows.map((r) => [r.code, r.value]));
+  assert.deepEqual([v.C01, v.t01, v.C02, v.t02, v.C03, v.t03, v.C04, v.t04], [20, 15, 220, 45, 220, 15, 450, 45]);
+  assert.deepEqual([v.C05, v.t05, v.C06, v.t06, v.C07, v.t07, v.C08], [450, 20, 730, 150, 730, 25, 550]);
+  assert.equal(v.t08, 60 + 60, 'casting hold = 60 min soak + 60 min buffer');
+  assert.equal(v.t09, -121);
+  k.segments.filter((g) => g.kind === 'hold').forEach((g) => assert.equal(g.fromC, g.toC));
+  // Burnout + cool-down + soak, excluding the buffer
+  assert.equal(k.totalMinutes - k.bufferMinutes, 375);
+});
+
+test('a run from the fast profile schedules the burnout from the flask-in tap', () => {
+  const run = E.newRun(P.fastProfile(), T0);
+  E.startRun(run, T0);
+  advanceTo(run, 'burnout_prep', T0);
+  E.completeCurrent(run, T0);
+  const s = E.schedule(run, T0);
+  const cool = s.rows.find((r) => r.stage.role === 'cool_to_cast');
+  assert.equal(cool.start, T0 + 290 * MIN);
+  const soak = s.rows.find((r) => r.stage.role === 'soak');
+  assert.equal(soak.end, T0 + 375 * MIN, 'ready to cast ≈ 6 h 15 min after the flask goes in');
+});
