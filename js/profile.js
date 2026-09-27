@@ -85,7 +85,9 @@
         metalHeatMinutes: { label: 'Estimated furnace heat-up / melt time', unit: 'min', value: 60, sourceType: 'working', note: 'Depends on your furnace and charge. Measure and adjust.' },
         metalReadyOffsetMinutes: { label: 'Metal ready after flask soak by', unit: 'min', value: 0, sourceType: 'working', note: 'The flask can wait at temperature; molten brass should not wait. 0 = metal ready as the soak completes.' },
         metalWeightG: { label: 'Metal weight', unit: 'g', value: 0, sourceType: 'working', note: 'Charge weight for this flask.' },
+        controllerHoldBufferMinutes: { label: 'Extra controller hold at casting temp', unit: 'min', value: 60, sourceType: 'working', note: 'Added to the soak in the kiln controller programme so the kiln keeps holding if casting runs late. The app still tracks the soak minimum.' },
       },
+      controller: { stopCode: -121, note: 'C/t segment format: the kiln moves from Cn to Cn+1 over tn minutes. A hold is a segment where Cn = Cn+1. Check your controller manual.' },
       stages: [
         stage({
           id: 'prepare_tree', name: 'Prepare resin tree', short: 'Prepare resin tree', phase: 'prepare', type: 'manual', minutes: 15,
@@ -221,6 +223,104 @@
     };
   }
 
+  /**
+   * 5-hour fast burnout for small (≈25 mm) models with strong kiln extraction,
+   * on a Technical Super Market R14-LPB kiln. Every value that departs from the
+   * Protocast datasheet keeps the datasheet figure as `ref`, so the app shows
+   * both and flags anything below a manufacturer minimum.
+   */
+  function fastProfile() {
+    const p = defaultProfile();
+    p.id = 'protocast-trueblue-cz121-fast5h';
+    p.name = 'Protocast / True Blue / CZ121 — 5-hour fast burnout (R14-LPB)';
+    p.materials.kiln = 'Technical Super Market R14-LPB';
+    p.makeDefault = true;
+    const byId = (id) => p.stages.find((s) => s.id === id);
+    const FAST = 'Fast 5-hour schedule (small models, 1 m³/min extraction)';
+
+    byId('prepare_tree').checklist.splice(1, 1, 'UV post-cured 20–30 min — prints completely hard and dry (no uncured resin)');
+    const set = byId('set');
+    set.name = 'Bench rest — leave flask untouched';
+    set.short = 'Bench rest';
+    set.minutes = 90;
+    set.provenance = { duration: 'manufacturer', minimum: 'manufacturer' };
+    set.ref = { minutes: 90, minMinutes: 90 };
+    set.doNow = 'Flask on a flat bench at room temperature. Leave it completely untouched.';
+    set.instructions = 'Do not shorten this step — the investment needs the full time to set before a fast heating cycle.';
+
+    const prep = byId('burnout_prep');
+    prep.checklist = prep.checklist.concat(['Air extractor fan ON', 'Door shutters cracked slightly', 'Controller programme entered (C/t values below)']);
+
+    const seg = (id, targetC, minutes, extra) => {
+      const st = byId(id);
+      st.targetC = targetC;
+      st.minutes = minutes;
+      st.provenance = { duration: 'experimental', target: targetC === st.ref.targetC ? 'manufacturer' : 'experimental' };
+      st.source = FAST;
+      Object.assign(st, extra || {});
+    };
+    seg('burnout_ramp_1', 220, 15, { instructions: 'Max ramp (~13°C/min). Drives off moisture.' });
+    seg('burnout_hold_1', 220, 45, { instructions: 'Drives off the remaining water.' });
+    seg('burnout_ramp_2', 450, 15, { instructions: 'Max ramp (~15°C/min).' });
+    seg('burnout_hold_2', 450, 45, { instructions: 'Starts breaking down the True Blue polymer.' });
+    seg('burnout_ramp_3', 730, 20, { name: 'Ramp to 730°C', short: 'Ramp → 730°C', instructions: 'Max ramp (~14°C/min).' });
+    seg('burnout_peak', 730, 150, {
+      short: 'Hold 730°C',
+      instructions: 'Peak burnout. Extraction fan clears the resin ash gas.',
+      provenance: { duration: 'experimental', target: 'experimental', minimum: 'manufacturer' },
+    });
+
+    const cool = byId('cool_to_cast');
+    cool.targetC = 550;
+    cool.minutes = 25;
+    cool.provenance = { target: 'experimental', duration: 'experimental' };
+    cool.instructions = 'Natural cooling. The schedule allows about 25 min; confirm when the kiln actually shows {targetC}°C.';
+    cool.notes = '550°C casting temperature is part of the fast schedule, not a Protocast specification.';
+
+    p.params.metalReadyOffsetMinutes.value = 0;
+    return p;
+  }
+
+  /** Profiles shipped with the app. Newly added ones are seeded into existing installs once. */
+  function builtInProfiles() { return [defaultProfile(), fastProfile()]; }
+
+  /**
+   * Kiln controller programme in C/t segment form (e.g. Yudian-style
+   * controllers): the kiln moves from Cn to Cn+1 over tn minutes, so a hold is
+   * written as Cn = Cn+1. Generated from the kiln stages plus the cool-down and
+   * casting-temperature hold, so it always matches what the app is timing.
+   */
+  function kilnProgram(profile) {
+    const stages = profile.stages;
+    const soakIdx = stages.findIndex((s) => s.role === 'soak');
+    const buffer = Number(param(profile, 'controllerHoldBufferMinutes')) || 0;
+    const segs = [];
+    let cur = Number(param(profile, 'ambientC'));
+    stages.forEach((s, i) => {
+      const inBurnout = s.control === 'kiln' || s.role === 'cool_to_cast' || i === soakIdx;
+      if (!inBurnout) return;
+      const target = targetOf(profile, i);
+      if (target == null) return;
+      const isSoak = i === soakIdx;
+      const minutes = Math.round(Number(s.minutes) + (isSoak ? buffer : 0));
+      const kind = target === cur ? 'hold' : target > cur ? 'ramp' : 'cool';
+      segs.push({ fromC: cur, toC: target, minutes, kind, stageId: s.id, label: (kind === 'hold' ? 'Hold ' + target + '°C' : (kind === 'ramp' ? 'Ramp ' : 'Cool ') + cur + ' → ' + target + '°C') + (isSoak && buffer ? ' (soak ' + s.minutes + ' + ' + buffer + ' buffer)' : '') });
+      cur = target;
+    });
+    const stop = (profile.controller && profile.controller.stopCode != null) ? profile.controller.stopCode : -121;
+    const rows = [];
+    segs.forEach((g, k) => {
+      const n = String(k + 1).padStart(2, '0');
+      rows.push({ code: 'C' + n, value: g.fromC, meaning: k === 0 ? 'Start temperature' : 'Segment ' + (k + 1) + ' starts at' });
+      rows.push({ code: 't' + n, value: g.minutes, meaning: g.label + ' — ' + g.minutes + ' min' });
+    });
+    const last = String(segs.length + 1).padStart(2, '0');
+    rows.push({ code: 'C' + last, value: cur, meaning: 'Final temperature' });
+    rows.push({ code: 't' + last, value: stop, meaning: 'End of programme (check your manual)' });
+    const total = segs.reduce((a, g) => a + g.minutes, 0);
+    return { segments: segs, rows, totalMinutes: total, bufferMinutes: buffer };
+  }
+
   const DEFECTS = [
     'Incomplete fill', 'Cold shut', 'Porosity', 'Gas porosity', 'Investment inclusions', 'Surface roughness',
     'Cracking', 'Flash', 'Metal penetration', 'Oxidation', 'Sprue failure', 'Resin ash / residue', 'Other',
@@ -334,6 +434,7 @@
     const base = defaultProfile();
     p.materials = Object.assign({}, base.materials, p.materials || {});
     p.params = Object.assign({}, base.params, p.params || {});
+    p.controller = Object.assign({}, base.controller, p.controller || {});
     p.stages = p.stages.map((s, i) => stage(Object.assign({ id: s.id || 'stage_' + i, name: s.name || 'Stage ' + (i + 1), phase: s.phase || 'burnout', type: s.type || 'timed' }, s)));
     p.id = p.id || CPT.util.uid('profile');
     p.name = p.name || 'Imported profile';
@@ -343,6 +444,6 @@
 
   CPT.Profile = {
     STAGE_TYPES, PHASES, SOURCE_TYPES, DEFECTS, RATINGS, SAFETY_NOTES,
-    defaultProfile, stage, byRole, param, targetOf, startTempOf, summary, editStageField, editParam, normalise,
+    defaultProfile, fastProfile, builtInProfiles, kilnProgram, stage, byRole, param, targetOf, startTempOf, summary, editStageField, editParam, normalise,
   };
 })(globalThis.CPT = globalThis.CPT || {});

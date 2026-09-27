@@ -319,6 +319,9 @@ th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color:
 .kv .v { font-weight: 700; }
 .edits { font-size: .85rem; color: var(--muted); }
 
+.kiln-prog { margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; padding: 4px 12px; background: var(--card-2); }
+.prog th { width: 3.5em; font-size: 1rem; color: var(--text); letter-spacing: 0; text-transform: none; }
+.prog td.v { font-weight: 900; font-size: 1.1rem; width: 4em; }
 .safety ul, .safety-list { padding-left: 20px; }
 .safety li, .safety-list li { margin: 6px 0; }
 .safety summary { color: var(--warn); }

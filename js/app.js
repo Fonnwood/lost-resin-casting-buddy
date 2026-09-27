@@ -36,6 +36,25 @@
   };
   CPT.app = app;
 
+  /** Add built-in profiles this install hasn't seen yet (once — deleting one keeps it deleted). */
+  function seedBuiltIns() {
+    const seen = app.settings.seenBuiltIns || app.profiles.filter((p) => p.builtIn).map((p) => p.id);
+    let changed = !app.settings.seenBuiltIns;
+    P.builtInProfiles().forEach((b) => {
+      if (seen.includes(b.id)) return;
+      seen.push(b.id);
+      changed = true;
+      if (!app.profiles.some((p) => p.id === b.id)) app.profiles.push(b);
+      if (b.makeDefault && !app.settings.defaultProfileId) app.settings.defaultProfileId = b.id;
+    });
+    if (changed) {
+      app.settings.seenBuiltIns = seen;
+      S.saveProfiles(app.profiles);
+      S.saveSettings(app.settings);
+    }
+  }
+  seedBuiltIns();
+
   const $ = (sel) => document.querySelector(sel);
   let lastSave = 0;
 

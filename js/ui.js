@@ -142,6 +142,17 @@
       '</div>' + (kiln ? '<p class="hint">Extending here does not change the kiln. Extend the segment on the kiln controller too.</p>' : '');
   }
 
+  /** Kiln controller entries (C/t segment format) generated from the stages. */
+  function kilnProgramBlock(profile, open) {
+    const k = P.kilnProgram(profile);
+    let html = '<details class="kiln-prog"' + (open ? ' open' : '') + '><summary>Kiln controller programme (' + h(U.dur(k.totalMinutes)) + ')</summary>';
+    html += '<table class="prog"><tbody>' + k.rows.map((r) => '<tr><th class="mono">' + h(r.code) + '</th><td class="mono v">' + h(r.value) + '</td><td>' + h(r.meaning) + '</td></tr>').join('') + '</tbody></table>';
+    html += '<p class="hint">Cn is the temperature at the start of segment n; tn is the minutes to get from Cn to Cn+1. A hold is a segment where Cn = Cn+1.' +
+      (k.bufferMinutes ? ' The last hold includes ' + h(k.bufferMinutes) + ' extra minutes so the kiln keeps the flask hot if casting runs late.' : '') +
+      ' Check the format and end code against your controller manual.</p></details>';
+    return html;
+  }
+
   // ------------------------------------------------------------ NOW view
 
   function renderNow(app, now) {
@@ -378,6 +389,7 @@
           body += '<div class="measure"><div><span class="k">Water</span><span class="v">' + h(vars.waterMl) + ' ml</span></div><div><span class="k">Powder</span><span class="v">' + h(vars.powderG) + ' g</span></div><div><span class="k">Ratio</span><span class="v">' + h(vars.waterRatioPct) + ':100</span></div></div>';
         }
         body += checklist(run, s);
+        if (s.role === 'kiln_start') body += kilnProgramBlock(run.profile, true);
         const pr = checklistProgress(run, s);
         const label = h(s.completeLabel || 'DONE — NEXT STEP');
         actions = btn('complete', label + (pr && pr.done < pr.n ? ' <small>(' + pr.done + '/' + pr.n + ' ticked)</small>' : ''), 'primary xl');
@@ -635,6 +647,8 @@
     });
     html += '</section>';
 
+    html += '<section class="card"><h2>Kiln controller</h2>' + kilnProgramBlock(p, false) + paramField('run', p, 'controllerHoldBufferMinutes') + '</section>';
+
     html += '<section class="card"><h2>Export</h2><div class="row2">' + btn('exportRun', 'Export run as JSON', 'ghost') + btn('exportIcs', '📅 Calendar alarms (.ics)', 'ghost') + '</div>' +
       '<div class="danger-zone">' + btn('abandonRun', run.status === 'draft' ? 'Discard draft' : 'Abandon run', 'danger') + '</div></section>';
     return { html, live: c.live };
@@ -656,7 +670,9 @@
         '<option value="wait"' + (s.type === 'temperature_wait' ? ' selected' : '') + '>Wait for kiln (you confirm)</option>' +
         '<option value="ramp"' + (s.type === 'ramp' ? ' selected' : '') + '>Scheduled ramp (kiln programme)</option></select></label>';
     }
-    html += '</div><div class="provrow">' + (pv.target && s.targetC != null ? prov(pv.target, 'Temp') : '') + (pv.duration ? prov(pv.duration, E.hasTimer(s) ? 'Time' : 'Estimate') : '') + (pv.minimum ? prov(pv.minimum, 'Min') : '') + '</div>' + refLine(s) + '</div>';
+    html += '</div>';
+    if (s.minMinutes != null && Number(s.minutes) < Number(s.minMinutes)) html += '<div class="refline">⚠ Below the minimum of ' + h(U.dur(s.minMinutes)) + (pv.minimum === 'manufacturer' ? ' (manufacturer)' : '') + '</div>';
+    html += '<div class="provrow">' + (pv.target && s.targetC != null ? prov(pv.target, 'Temp') : '') + (pv.duration ? prov(pv.duration, E.hasTimer(s) ? 'Time' : 'Estimate') : '') + (pv.minimum ? prov(pv.minimum, 'Min') : '') + '</div>' + refLine(s) + '</div>';
     return html;
   }
 
