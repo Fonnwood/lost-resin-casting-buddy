@@ -67,6 +67,7 @@
       name: 'Protocast / True Blue / CZ121 — Initial',
       schema: 1,
       builtIn: true,
+      builtInVersion: 1,
       materials: {
         investment: 'GRS Protocast',
         resin: 'Siraya Tech Cast True Blue',
@@ -75,7 +76,7 @@
         castingMachine: 'Vacuum casting table/chamber',
       },
       params: {
-        waterRatioPct: { label: 'Water ratio', unit: 'g water / 100 g powder', value: 40, sourceType: 'manufacturer', ref: 40, source: SOURCE, note: 'Conventional mixing 40:100. Vacuum mixing range 38–40:100.' },
+        waterRatioPct: { label: 'Water ratio', unit: 'g water / 100 g powder', value: 40, sourceType: 'manufacturer', ref: 40, range: [38, 40], options: [36, 38, 40], source: SOURCE, note: 'Datasheet: conventional mixing 40:100; vacuum mixing range 38–40:100. Less water = stronger, denser mould but thicker slurry, shorter working time and lower permeability.' },
         powderG: { label: 'Powder quantity', unit: 'g', value: 650, sourceType: 'working', note: 'Working starting quantity — adjust after measuring actual usage.' },
         flaskDiameterMm: { label: 'Flask diameter', unit: 'mm', value: 76.2, sourceType: 'working', note: 'Nominally 3 inch.' },
         flaskHeightMm: { label: 'Flask height', unit: 'mm', value: 101.6, sourceType: 'working', note: 'Nominally 4 inch.' },
@@ -235,6 +236,7 @@
     p.name = 'Protocast / True Blue / CZ121 — 5-hour fast burnout (R14-LPB)';
     p.materials.kiln = 'Technical Super Market R14-LPB';
     p.makeDefault = true;
+    p.builtInVersion = 2;
     const byId = (id) => p.stages.find((s) => s.id === id);
     const FAST = 'Fast 5-hour schedule (small models, 1 m³/min extraction)';
 
@@ -277,6 +279,9 @@
     cool.instructions = 'Natural cooling. The schedule allows about 25 min; confirm when the kiln actually shows {targetC}°C.';
     cool.notes = '550°C casting temperature is part of the fast schedule, not a Protocast specification.';
 
+    // Stronger mix than the datasheet range — experimental.
+    p.params.waterRatioPct.value = 36;
+    p.params.waterRatioPct.sourceType = 'experimental';
     p.params.metalReadyOffsetMinutes.value = 0;
     return p;
   }
@@ -412,16 +417,23 @@
     return null;
   }
 
+  /** Is a value outside the parameter's datasheet range (if it has one)? */
+  function outOfRange(p, value) {
+    const v = Number(value == null ? p.value : value);
+    return !!(p.range && (v < p.range[0] || v > p.range[1]));
+  }
+
   function editParam(p, value) {
     p.value = value;
     if (p.ref == null) return null;
     const before = p.sourceType;
     if (Number(value) === Number(p.ref)) p.sourceType = 'manufacturer';
-    else if (before === 'manufacturer') p.sourceType = 'working';
+    else if (outOfRange(p, value)) p.sourceType = 'experimental';
+    else if (before === 'manufacturer' || (p.range && before === 'experimental')) p.sourceType = 'working';
     if (before !== p.sourceType) {
-      return p.sourceType === 'manufacturer'
-        ? 'Matches the datasheet again — marked as manufacturer value.'
-        : 'Changed from the datasheet value — now marked as a working setting.';
+      if (p.sourceType === 'manufacturer') return 'Matches the datasheet again — marked as manufacturer value.';
+      if (p.sourceType === 'experimental') return 'Outside the datasheet range — marked as experimental.';
+      return 'Changed from the datasheet value — now marked as a working setting.';
     }
     return null;
   }
@@ -444,6 +456,6 @@
 
   CPT.Profile = {
     STAGE_TYPES, PHASES, SOURCE_TYPES, DEFECTS, RATINGS, SAFETY_NOTES,
-    defaultProfile, fastProfile, builtInProfiles, kilnProgram, stage, byRole, param, targetOf, startTempOf, summary, editStageField, editParam, normalise,
+    defaultProfile, fastProfile, builtInProfiles, kilnProgram, stage, byRole, param, targetOf, startTempOf, summary, editStageField, editParam, outOfRange, normalise,
   };
 })(globalThis.CPT = globalThis.CPT || {});

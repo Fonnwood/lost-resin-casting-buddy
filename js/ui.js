@@ -387,6 +387,9 @@
         timerHtml = '<div class="timer small">' + c.L('timer', U.hms(now - row.start)) + '</div><div class="timer-label">elapsed' + (s.minutes ? ' · est. ' + h(U.dur(s.minutes)) : '') + '</div>';
         if (s.role === 'measure') {
           body += '<div class="measure"><div><span class="k">Water</span><span class="v">' + h(vars.waterMl) + ' ml</span></div><div><span class="k">Powder</span><span class="v">' + h(vars.powderG) + ' g</span></div><div><span class="k">Ratio</span><span class="v">' + h(vars.waterRatioPct) + ':100</span></div></div>';
+          const wr = run.profile.params.waterRatioPct;
+          if (wr) body += '<div class="provrow">' + prov(wr.sourceType, 'Ratio') + '</div>';
+          if (wr && P.outOfRange(wr)) body += '<div class="refline">⚠ Stronger than the datasheet range (' + h(wr.range[0]) + '–' + h(wr.range[1]) + ':100): thicker slurry, less working time. Keep to the mixing times.</div>';
         }
         body += checklist(run, s);
         if (s.role === 'kiln_start') body += kilnProgramBlock(run.profile, true);
@@ -622,6 +625,7 @@
       '<div><span class="k">Water</span><span class="v big">' + c.L('calcWater', calc.waterMl + ' ml') + '</span></div>' +
       '<div><span class="k">Powder</span><span class="v big">' + c.L('calcPowder', calc.powderG + ' g') + '</span></div></div>' +
       '<p class="hint"><strong>Working starting quantity — adjust after measuring actual usage.</strong> Measure water first, add powder to water.</p>' +
+      mixRatios(p) +
       '<div class="grid2">' + paramField('run', p, 'powderG') + paramField('run', p, 'waterRatioPct') + '</div>' +
       '<div class="grid2">' + paramField('run', p, 'flaskDiameterMm') + paramField('run', p, 'flaskHeightMm') + '</div>' +
       field('Model / tree displacement <small>ml (optional)</small>', numInput('run|values.displacementMl', run.values.displacementMl)) +
@@ -652,6 +656,31 @@
     html += '<section class="card"><h2>Export</h2><div class="row2">' + btn('exportRun', 'Export run as JSON', 'ghost') + btn('exportIcs', '📅 Calendar alarms (.ics)', 'ghost') + '</div>' +
       '<div class="danger-zone">' + btn('abandonRun', run.status === 'draft' ? 'Discard draft' : 'Abandon run', 'danger') + '</div></section>';
     return { html, live: c.live };
+  }
+
+  /** Water needed at each common ratio for the current powder quantity; tap one to use it. */
+  function mixRatios(p) {
+    const par = p.params.waterRatioPct;
+    if (!par) return '';
+    const powder = U.num(P.param(p, 'powderG'), 0);
+    const cur = Number(par.value);
+    const opts = (par.options || [36, 38, 40]).slice();
+    if (!opts.includes(cur)) opts.push(cur);
+    opts.sort((a, b) => a - b);
+    const label = (r) => {
+      if (Number(r) === Number(par.ref)) return 'Datasheet — conventional mix';
+      if (par.range && r >= par.range[0] && r <= par.range[1]) return 'Datasheet vacuum-mix range';
+      return 'Stronger than datasheet · experimental';
+    };
+    let html = '<div class="eyebrow">MIX RATIO — water for ' + h(powder) + ' g powder</div><div class="ratios">';
+    opts.forEach((r) => {
+      const on = Number(r) === cur;
+      html += '<button type="button" class="ratio' + (on ? ' on' : '') + '" data-action="setRatio" data-arg="' + h(r) + '" aria-pressed="' + on + '">' +
+        '<span class="r">' + h(r) + ':100</span><span class="w">' + h(U.round(powder * r / 100, 1)) + ' ml</span><span class="l">' + (on ? '✓ ' : '') + h(label(r)) + '</span></button>';
+    });
+    html += '</div>';
+    if (P.outOfRange(par)) html += '<div class="refline">⚠ ' + h(cur) + ':100 is outside the Protocast datasheet range (' + h(par.range[0]) + '–' + h(par.range[1]) + ':100). Expect a thicker slurry and shorter working time — vacuum well and work quickly.</div>';
+    return html;
   }
 
   function stageEditRow(scope, s, i, locked, row) {
@@ -712,8 +741,8 @@
     if (!runs.length) return { html: html + '<section class="card"><p>No finished runs yet. Completed casts and their results appear here.</p></section>', live: c.live };
 
     const recs = runs.map((r) => ({ run: r, rec: E.record(r) }));
-    html += '<section class="card"><h2>Compare runs</h2><div class="table-wrap"><table class="compare"><thead><tr><th>Run</th><th>Flask</th><th>Metal</th><th>Peak hold</th><th>Soak</th><th>Result</th></tr></thead><tbody>' +
-      recs.map(({ run, rec }) => '<tr data-action="historyOpen" data-arg="' + h(run.id) + '"><td><strong>' + h(run.name) + '</strong><br><small>' + h(rec.date) + '</small></td><td>' + h(rec.flaskCastingTempC) + '°C</td><td>' + h(rec.metalPourTempC) + '°C</td><td>' + h(U.dur(rec.peakHoldMinutes)) + '</td><td>' + h(U.dur(rec.soakMinutes)) + '</td><td>' + (run.status === 'abandoned' ? 'abandoned' : rec.rating ? h(rec.rating) + '/5' : '—') + '</td></tr>').join('') +
+    html += '<section class="card"><h2>Compare runs</h2><div class="table-wrap"><table class="compare"><thead><tr><th>Run</th><th>Mix</th><th>Flask</th><th>Metal</th><th>Peak hold</th><th>Soak</th><th>Result</th></tr></thead><tbody>' +
+      recs.map(({ run, rec }) => '<tr data-action="historyOpen" data-arg="' + h(run.id) + '"><td><strong>' + h(run.name) + '</strong><br><small>' + h(rec.date) + '</small></td><td>' + h(rec.waterRatioPct) + ':100</td><td>' + h(rec.flaskCastingTempC) + '°C</td><td>' + h(rec.metalPourTempC) + '°C</td><td>' + h(U.dur(rec.peakHoldMinutes)) + '</td><td>' + h(U.dur(rec.soakMinutes)) + '</td><td>' + (run.status === 'abandoned' ? 'abandoned' : rec.rating ? h(rec.rating) + '/5' : '—') + '</td></tr>').join('') +
       '</tbody></table></div></section>';
 
     html += recs.map(({ run, rec }) => '<button type="button" class="card listcard" data-action="historyOpen" data-arg="' + h(run.id) + '"><div class="lc-top"><strong>' + h(run.name) + '</strong><span>' + (rec.rating ? '★'.repeat(rec.rating) + '☆'.repeat(5 - rec.rating) : run.status === 'abandoned' ? 'abandoned' : '') + '</span></div>' +
@@ -731,7 +760,7 @@
     let html = '<div class="row2">' + btn('historyBack', '← All runs', 'ghost') + '</div>';
     html += '<section class="card"><h2>' + h(run.name) + '</h2><p class="muted">' + h(rec.date) + ' · ' + h(run.profileName) + (run.values.modelName ? ' · ' + h(run.values.modelName) : '') + '</p>' +
       '<div class="kv">' +
-      kv('Investment', rec.investment) + kv('Resin', rec.resin) + kv('Powder / water', rec.powderG + ' g / ' + rec.waterMl + ' ml') +
+      kv('Investment', rec.investment) + kv('Resin', rec.resin) + kv('Powder / water', rec.powderG + ' g / ' + rec.waterMl + ' ml (' + rec.waterRatioPct + ':100)') +
       kv('Flask', rec.flaskDiameterMm + ' × ' + rec.flaskHeightMm + ' mm') + kv('Metal', rec.metal + (rec.metalWeightG ? ' · ' + rec.metalWeightG + ' g' : '')) +
       kv('Flask casting temp', rec.flaskCastingTempC + '°C') + kv('Pour temp', rec.metalPourTempC + '°C') + kv('Peak hold', rec.peakC + '°C · ' + U.dur(rec.peakHoldMinutes)) +
       kv('Flask out → pour', rec.flaskOutToPourSeconds != null ? rec.flaskOutToPourSeconds + ' s' : '—') +
