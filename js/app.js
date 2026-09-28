@@ -41,6 +41,17 @@
     const seen = app.settings.seenBuiltIns || app.profiles.filter((p) => p.builtIn).map((p) => p.id);
     let changed = !app.settings.seenBuiltIns;
     P.builtInProfiles().forEach((b) => {
+      // Refresh a built-in you haven't edited when the app ships a newer version.
+      const i = app.profiles.findIndex((p) => p.id === b.id);
+      if (i >= 0 && app.profiles[i].builtIn && !app.profiles[i].edited && (app.profiles[i].builtInVersion || 1) < b.builtInVersion) {
+        const old = app.profiles[i];
+        // Profiles edited before edits were tracked: keep a copy rather than lose them.
+        if (JSON.stringify(old.stages) !== JSON.stringify(b.stages) || JSON.stringify(old.materials) !== JSON.stringify(b.materials)) {
+          app.profiles.push(Object.assign(U.clone(old), { id: U.uid('profile'), name: old.name + ' (before update)', builtIn: false, makeDefault: false }));
+        }
+        app.profiles[i] = b;
+        changed = true;
+      }
       if (seen.includes(b.id)) return;
       seen.push(b.id);
       changed = true;
@@ -401,6 +412,14 @@
     closeModal: () => closeModal(),
     dismissBanner: () => { app.banner = null; renderChrome(); },
     safetyAck: () => { app.settings.safetyAcknowledged = true; saveSettings(); closeModal(); },
+    setRatio: (arg) => withRun((run, now) => {
+      const par = run.profile.params.waterRatioPct;
+      const before = par.value;
+      if (Number(before) === Number(arg)) return;
+      const note = P.editParam(par, Number(arg));
+      E.logEdit(run, 'params.waterRatioPct.value', before, Number(arg), now);
+      toast('Water ratio ' + arg + ':100 — ' + E.waterMl(run.profile) + ' ml water.' + (note ? ' ' + note : ''));
+    }),
     planOpen: () => openModal({ type: 'plan' }),
     planPreset: (arg) => withRun((run) => {
       const d = new Date();
@@ -460,6 +479,7 @@
     const p = app.profiles.find((x) => x.id === app.editProfileId);
     if (!p) return;
     fn(p);
+    p.edited = true;
     saveProfiles();
     render(true);
   }
@@ -525,7 +545,7 @@
   function persistScope(el) {
     const scope = el.getAttribute('data-bind').split('|')[0];
     if (scope === 'settings') { saveSettings(); applyTheme(); if (el.getAttribute('data-bind') === 'settings|wakeLock') A.setWakeLock(app.settings.wakeLock); }
-    else if (scope.startsWith('profile:')) saveProfiles();
+    else if (scope.startsWith('profile:')) { const p = scopeTarget(scope); if (p) p.edited = true; saveProfiles(); }
     else save();
   }
 

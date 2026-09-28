@@ -319,6 +319,13 @@ th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color:
 .kv .v { font-weight: 700; }
 .edits { font-size: .85rem; color: var(--muted); }
 
+.ratios { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.ratio { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 76px; padding: 8px 10px; border-radius: 12px; border: 2px solid var(--line); background: var(--card-2); cursor: pointer; text-align: left; }
+.ratio .r { font-weight: 900; font-size: 1.15rem; }
+.ratio .w { font-weight: 800; font-variant-numeric: tabular-nums; }
+.ratio .l { font-size: .72rem; color: var(--muted); font-weight: 700; line-height: 1.2; }
+.ratio.on { border-color: var(--accent); outline: 2px solid var(--accent); }
+.ratio.on .l { color: var(--text); }
 .kiln-prog { margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; padding: 4px 12px; background: var(--card-2); }
 .prog th { width: 3.5em; font-size: 1rem; color: var(--text); letter-spacing: 0; text-transform: none; }
 .prog td.v { font-weight: 900; font-size: 1.1rem; width: 4em; }

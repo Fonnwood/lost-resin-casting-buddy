@@ -359,3 +359,26 @@ test('a run from the fast profile schedules the burnout from the flask-in tap', 
   const soak = s.rows.find((r) => r.stage.role === 'soak');
   assert.equal(soak.end, T0 + 375 * MIN, 'ready to cast ≈ 6 h 15 min after the flask goes in');
 });
+
+test('fast profile uses a 36:100 mix, marked experimental against the 38–40 datasheet range', () => {
+  const p = P.fastProfile();
+  const wr = p.params.waterRatioPct;
+  assert.equal(wr.value, 36);
+  assert.equal(wr.sourceType, 'experimental');
+  assert.ok(P.outOfRange(wr));
+  assert.equal(E.waterMl(p), 234, '650 g × 0.36');
+  assert.equal(P.summary(p).waterRatioPct, 36);
+  assert.equal(P.defaultProfile().params.waterRatioPct.value, 40);
+});
+
+test('water ratio provenance follows the datasheet range', () => {
+  const wr = P.defaultProfile().params.waterRatioPct;
+  P.editParam(wr, 38);
+  assert.equal(wr.sourceType, 'working', 'inside the vacuum-mix range');
+  P.editParam(wr, 36);
+  assert.equal(wr.sourceType, 'experimental', 'below the range');
+  P.editParam(wr, 39);
+  assert.equal(wr.sourceType, 'working');
+  P.editParam(wr, 40);
+  assert.equal(wr.sourceType, 'manufacturer');
+});
