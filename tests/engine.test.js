@@ -382,3 +382,49 @@ test('water ratio provenance follows the datasheet range', () => {
   P.editParam(wr, 40);
   assert.equal(wr.sourceType, 'manufacturer');
 });
+
+test('escape hatches: reset, skip and go back work on every stage and are undoable', () => {
+  const run = started();
+  // Every stage, including the gated soak and cooling stages, can be reset, skipped and stepped back from.
+  const n = run.profile.stages.length;
+  for (let guard = 0; guard < n; guard++) {
+    const before = E.currentIndex(run);
+    const t = T0 + (guard + 1) * MIN;
+    const id = cur(run).id;
+    assert.ok(E.restartCurrent(run, t), 'reset works on ' + id);
+    assert.equal(E.currentIndex(run), before, 'reset stays on the same stage');
+    assert.ok(E.skipCurrent(run, t), 'skip works on ' + id);
+    assert.equal(E.currentIndex(run), before + 1);
+    assert.ok(E.backOne(run, t), 'back works');
+    assert.equal(E.currentIndex(run), before);
+    E.skipCurrent(run, t);
+  }
+  assert.equal(E.currentIndex(run), n, 'skipping the last stage reaches the end');
+  assert.ok(E.backOne(run, T0 + 999 * MIN), 'can step back from the end');
+  assert.equal(E.currentIndex(run), n - 1);
+});
+
+test('reset restarts a stuck timer; undo restores it', () => {
+  const run = started();
+  advanceTo(run, 'set', T0);
+  E.extend(run, 'set', 30, T0);
+  E.pause(run, 'set', T0 + 5 * MIN);
+  const t = T0 + 20 * MIN;
+  E.restartCurrent(run, t);
+  const row = E.schedule(run, t).rows[E.currentIndex(run)];
+  assert.equal(row.paused, false);
+  assert.equal(row.ext, 0);
+  assert.equal(Math.round(row.remaining / MIN), 120, 'full set time again');
+  assert.match(E.undoable(run).label, /Reset timer/);
+  E.undo(run);
+  assert.equal(E.schedule(run, t).rows[E.currentIndex(run)].paused, true);
+});
+
+test('skip gets past the flask soak and the cooling stage without the gates', () => {
+  const run = started();
+  advanceTo(run, 'soak', T0);
+  assert.ok(E.skipCurrent(run, T0 + MIN));
+  advanceTo(run, 'cooling', T0 + 2 * MIN);
+  assert.ok(E.skipCurrent(run, T0 + 3 * MIN));
+  assert.equal(cur(run).id, 'finish');
+});
