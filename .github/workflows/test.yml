@@ -3,20 +3,25 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
-  engine:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Unit tests (engine)
-        run: node --test tests/*.test.js
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
       - name: End-to-end walk-through (phone-sized browser)
         run: |
-          npm install --no-save playwright@1.56.1 http-server@14
           npx playwright install --with-deps chromium
-          npx http-server -p 8080 -s -c-1 . &
+          npm start &
           sleep 2
-          node tests/e2e.js http://localhost:8080
+          npm run test:e2e -- http://localhost:8080

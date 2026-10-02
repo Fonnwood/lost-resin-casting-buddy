@@ -95,6 +95,8 @@
     const now = Date.now();
     const root = $('#view');
     const out = RENDER[app.view](app, now);
+    out.html = U.localiseHtml(out.html);
+    Object.keys(out.live).forEach((k) => { out.live[k] = U.localiseTemps(out.live[k]); });
     if (force || TICK_VIEWS[app.view] || app.lastHtml.view !== app.view) {
       if (out.html !== app.lastHtml.html || app.lastHtml.view !== app.view) {
         const focused = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-bind');
@@ -124,12 +126,12 @@
     }
     const banner = $('#banner');
     if (app.banner && app.banner.t && Date.now() - app.banner.t > 15 * U.MIN) app.banner = null;
-    const html = app.banner ? '<div class="alert-banner" role="alert"><div><strong>' + U.esc(app.banner.title) + '</strong>' + (app.banner.body ? '<div>' + U.esc(app.banner.body) + '</div>' : '') + '</div><button type="button" class="btn ghost small" data-action="dismissBanner">OK</button></div>' : '';
+    const html = app.banner ? '<div class="alert-banner" role="alert"><div><strong>' + U.esc(U.localiseTemps(app.banner.title)) + '</strong>' + (app.banner.body ? '<div>' + U.esc(U.localiseTemps(app.banner.body)) + '</div>' : '') + '</div><button type="button" class="btn ghost small" data-action="dismissBanner">OK</button></div>' : '';
     if (banner.innerHTML !== html) banner.innerHTML = html;
   }
 
   function renderModal() {
-    $('#modal').innerHTML = UI.renderModal(app, Date.now());
+    $('#modal').innerHTML = U.localiseHtml(UI.renderModal(app, Date.now()));
     const first = $('#modal input, #modal select');
     if (first && app.modal && app.modal.type !== 'attention') first.focus({ preventScroll: true });
   }
@@ -139,7 +141,7 @@
 
   function toast(msg) {
     const el = $('#toast');
-    el.textContent = msg;
+    el.textContent = U.localiseTemps(msg);
     el.classList.add('show');
     clearTimeout(toast.t);
     toast.t = setTimeout(() => el.classList.remove('show'), 3500);
@@ -153,12 +155,58 @@
     render(true);
   }
 
+  /** Readable text colour (near-black or white) for a #rrggbb background. */
+  function inkFor(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const lum = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+    return lum > 0.55 ? '#1a1206' : '#ffffff';
+  }
+
+  /** Apply every display preference: theme, accent, text size, units, custom CSS. */
   function applyTheme() {
-    const t = app.settings.theme;
-    if (t === 'auto') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', t);
+    const s = app.settings;
+    const root = document.documentElement;
+    const t = s.theme;
+    if (t === 'auto') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', t);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', t === 'light' ? '#f4f2ee' : '#0b0c0e');
+
+    if (/^#[0-9a-f]{6}$/i.test(s.accent || '')) {
+      root.style.setProperty('--accent', s.accent);
+      root.style.setProperty('--accent-ink', inkFor(s.accent));
+    } else {
+      root.style.removeProperty('--accent');
+      root.style.removeProperty('--accent-ink');
+    }
+    const scale = Math.min(150, Math.max(80, U.num(s.textScale, 100)));
+    root.style.fontSize = scale === 100 ? '' : scale + '%';
+
+    let style = document.getElementById('user-css');
+    if (!style) { style = document.createElement('style'); style.id = 'user-css'; document.head.appendChild(style); }
+    if (style.textContent !== (s.customCss || '')) style.textContent = s.customCss || '';
+
+    U.setFormat(s);
+  }
+
+  /** Name, logo and page title from config.js. */
+  function applyBranding() {
+    const cfg = CPT.config || {};
+    const name = cfg.appName || 'Casting Buddy';
+    document.title = name;
+    const brand = document.querySelector('.brand');
+    if (brand) {
+      brand.setAttribute('aria-label', name + ' — go to Now');
+      brand.innerHTML = '<span class="logo" aria-hidden="true">' + U.esc(cfg.logo != null ? cfg.logo : '▲') + '</span><span>' + U.esc(name) + '</span>';
+    }
+    const title = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (title) title.setAttribute('content', name);
+    if (cfg.customCssUrl) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = cfg.customCssUrl;
+      document.head.appendChild(link);
+    }
   }
 
   // ---------------------------------------------------------------- tick
@@ -412,6 +460,7 @@
     },
     confirmYes: () => { const m = app.modal; closeModal(); if (m && m.onYes) m.onYes(); },
     closeModal: () => closeModal(),
+    accentReset: () => { app.settings.accent = ''; saveSettings(); applyTheme(); render(true); },
     dismissBanner: () => { app.banner = null; renderChrome(); },
     safetyAck: () => { app.settings.safetyAcknowledged = true; saveSettings(); closeModal(); },
     setRatio: (arg) => withRun((run, now) => {
@@ -447,7 +496,7 @@
       if (!run) return;
       const cal = E.calendar(run, Date.now());
       if (!cal.count) { toast('Nothing upcoming to add.'); return; }
-      A.download('casting-' + safeName(run.name) + '.ics', cal.text, 'text/calendar');
+      A.download('casting-' + safeName(run.name) + '.ics', U.localiseTemps(cal.text), 'text/calendar');
       toast(cal.count + ' alarms exported. Re-export if the schedule changes.');
     },
     historyOpen: (arg) => { app.historyRunId = arg; app.view = 'history'; window.scrollTo(0, 0); render(true); },
@@ -501,6 +550,7 @@
     if (type === 'bool') return el.checked;
     const v = el.value;
     if (type === 'number') return v === '' ? null : U.num(v, null);
+    if (type === 'tempC') { const n = v === '' ? null : U.num(v, null); return n == null ? null : U.fromDisplayTemp(n); }
     if (type === 'seconds') return v === '' ? 0 : U.num(v, 0) / 60;
     if (type === 'lines') return v.split('\n').map((x) => x.trim()).filter(Boolean);
     if (type === 'datetime') { if (!v) return null; const t = new Date(v).getTime(); return isNaN(t) ? null : t; }
@@ -584,7 +634,7 @@
     const el = e.target;
     if (!el.hasAttribute || !el.hasAttribute('data-bind')) return;
     const t = el.getAttribute('data-type');
-    if (t !== 'number') return;
+    if (t !== 'number' && t !== 'tempC') return;
     // While drafting, live-update calculated readouts (water ml etc.) as you
     // type. Everything else is applied on 'change' so edits are logged once.
     const spec = el.getAttribute('data-bind');
@@ -594,6 +644,7 @@
   }
 
   function boot() {
+    applyBranding();
     applyTheme();
     document.addEventListener('click', onClick);
     document.addEventListener('change', onChange);

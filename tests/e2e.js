@@ -164,6 +164,48 @@ const MIN = 60000;
   await page.reload();
   await expectText('MEASURE WATER AND POWDER');
 
+  // Customisation: units, accent, text size, custom CSS, 12-hour clock
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('[data-bind="settings|tempUnit"]').selectOption('F');
+  await page.locator('[data-bind="settings|textScale"]').selectOption('115');
+  await page.locator('[data-bind="settings|accent"]').evaluate((el) => { el.value = '#2dd4bf'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.getByText('Custom CSS', { exact: true }).click();
+  await page.locator('[data-bind="settings|customCss"]').fill(':root { --radius: 2px; }');
+  await page.locator('[data-bind="settings|customCss"]').blur();
+  await page.waitForTimeout(100);
+  const look = await page.evaluate(() => ({
+    accent: document.documentElement.style.getPropertyValue('--accent'),
+    size: document.documentElement.style.fontSize,
+    css: document.getElementById('user-css').textContent,
+  }));
+  if (look.accent !== '#2dd4bf' || look.size !== '115%' || !/--radius/.test(look.css)) errors.push('Appearance settings not applied: ' + JSON.stringify(look));
+  await page.getByRole('button', { name: 'NOW', exact: true }).click();
+  await page.getByRole('button', { name: 'RUN' }).click();
+  await expectText('°F');
+  const bodyText = await page.locator('body').innerText();
+  if (/\d°C/.test(bodyText)) errors.push('°C still visible after switching to °F');
+  // A temperature typed in °F is stored in °C
+  const tInput = page.locator('input[data-bind="run|profile.stages.9.targetC"]');
+  await tInput.fill('1000');
+  await tInput.dispatchEvent('change');
+  const storedC = await page.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('cpt.v1.runs')).find((r) => r.id === JSON.parse(localStorage.getItem('cpt.v1.activeRunId'))).profile.stages.map((s) => s.targetC)));
+  if (!/537\.78,/.test(storedC)) errors.push('1000°F was not stored as 537.78°C: ' + storedC);
+  await shot('fahrenheit');
+
+  // A brand-new profile from scratch can be edited, including its phase headings
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await tap('New blank profile');
+  await expectText('Phase headings');
+  await page.locator('[data-bind$="|phases.prepare"]').fill('Getting ready');
+  await page.locator('[data-bind$="|phases.prepare"]').dispatchEvent('change');
+  await expectText('Stages');
+  await shot('blank-profile-editor');
+
+  // Importing a broken profile explains what is wrong instead of failing silently
+  await page.getByRole('button', { name: '← Done' }).click();
+  await page.locator('input[data-action-change="importProfile"]').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ name: 'Bad', stages: [{ id: 'a', type: 'nonsense' }] })) });
+  await expectText('Import failed');
+
   // Light theme renders
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
   await shot('light-theme');

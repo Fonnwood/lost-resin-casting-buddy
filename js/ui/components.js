@@ -142,7 +142,7 @@
   function kilnProgramBlock(profile, open) {
     const k = P.kilnProgram(profile);
     let html = '<details class="kiln-prog"' + (open ? ' open' : '') + '><summary>Kiln controller programme (' + h(U.dur(k.totalMinutes)) + ')</summary>';
-    html += '<table class="prog"><tbody>' + k.rows.map((r) => '<tr><th class="mono">' + h(r.code) + '</th><td class="mono v">' + h(r.value) + '</td><td>' + h(r.meaning) + '</td></tr>').join('') + '</tbody></table>';
+    html += '<table class="prog"><tbody>' + k.rows.map((r) => '<tr><th class="mono">' + h(r.code) + '</th><td class="mono v">' + h(r.code.charAt(0) === 'C' ? U.toDisplayTemp(r.value) : r.value) + '</td><td>' + h(r.meaning) + '</td></tr>').join('') + '</tbody></table>';
     html += '<p class="hint">Cn is the temperature at the start of segment n; tn is the minutes to get from Cn to Cn+1. A hold is a segment where Cn = Cn+1.' +
       (k.bufferMinutes ? ' The last hold includes ' + h(k.bufferMinutes) + ' extra minutes so the kiln keeps the flask hot if casting runs late.' : '') +
       ' Check the format and end code against your controller manual.</p></details>';
@@ -153,8 +153,10 @@
     return '<label class="field"><span class="label">' + label + '</span>' + input + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</label>';
   }
 
-  function numInput(bind, value, attrs) {
-    return '<input type="number" inputmode="decimal" step="any" data-type="number" data-bind="' + h(bind) + '" value="' + h(value == null ? '' : value) + '"' + (attrs || '') + '>';
+  /** Number input. `isTemp` shows/accepts the user's temperature unit while storing °C. */
+  function numInput(bind, value, attrs, isTemp) {
+    const shown = isTemp ? U.toDisplayTemp(value) : value;
+    return '<input type="number" inputmode="decimal" step="any" data-type="' + (isTemp ? 'tempC' : 'number') + '" data-bind="' + h(bind) + '" value="' + h(shown == null ? '' : shown) + '"' + (attrs || '') + '>';
   }
 
   function paramField(scope, p, key, opts) {
@@ -162,7 +164,7 @@
     if (!par) return '';
     opts = opts || {};
     return field(h(par.label) + ' <small>' + h(par.unit) + '</small>',
-      numInput(scope + '|params.' + key + '.value', par.value, opts.disabled ? ' disabled' : ''),
+      numInput(scope + '|params.' + key + '.value', par.value, opts.disabled ? ' disabled' : '', par.unit === '°C'),
       prov(par.sourceType) + (par.note ? ' ' + h(par.note) : '') + (par.ref != null && Number(par.ref) !== Number(par.value) ? ' <strong>Datasheet: ' + h(par.ref) + '</strong>' : ''));
   }
 
@@ -207,8 +209,8 @@
     html += field('Notes', '<textarea rows="4" data-bind="' + bind + 'notes" placeholder="e.g. North tower failed to fill. Very good detail elsewhere.">' + h(d.notes || '') + '</textarea>');
     html += '<div class="grid3">' +
       field('Actual metal weight (g)', '<input type="number" inputmode="decimal" data-type="number" data-bind="' + bind + 'actualMetalWeightG" value="' + h(d.actualMetalWeightG == null ? '' : d.actualMetalWeightG) + '">') +
-      field('Actual flask temp (°C)', '<input type="number" inputmode="decimal" data-type="number" data-bind="' + bind + 'actualFlaskC" value="' + h(d.actualFlaskC == null ? '' : d.actualFlaskC) + '">') +
-      field('Actual pour temp (°C)', '<input type="number" inputmode="decimal" data-type="number" data-bind="' + bind + 'actualPourC" value="' + h(d.actualPourC == null ? '' : d.actualPourC) + '">') +
+      field('Actual flask temp (°C)', '<input type="number" inputmode="decimal" data-type="tempC" data-bind="' + bind + 'actualFlaskC" value="' + h(d.actualFlaskC == null ? '' : U.toDisplayTemp(d.actualFlaskC)) + '">') +
+      field('Actual pour temp (°C)', '<input type="number" inputmode="decimal" data-type="tempC" data-bind="' + bind + 'actualPourC" value="' + h(d.actualPourC == null ? '' : U.toDisplayTemp(d.actualPourC)) + '">') +
       '</div>';
     return html;
   }

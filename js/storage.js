@@ -9,6 +9,11 @@
 
   const DEFAULT_SETTINGS = {
     theme: 'dark',
+    accent: '',          // '' = theme default, otherwise a #rrggbb colour
+    textScale: 100,      // percent
+    tempUnit: 'C',       // display only; data is always stored in °C
+    clock24h: true,
+    customCss: '',       // the user's own CSS, applied last
     defaultProfileId: null,
     wakeLock: false,
     alerts: {
@@ -58,7 +63,9 @@
     saveActiveRunId(id) { return write(KEYS.activeRunId, id); },
     loadSettings() {
       const s = read(KEYS.settings, {});
-      const merged = Object.assign({}, DEFAULT_SETTINGS, s);
+      // Host defaults (config.js) sit between the built-in defaults and the user's own choices.
+      const host = (CPT.config && CPT.config.defaultSettings) || {};
+      const merged = Object.assign({}, DEFAULT_SETTINGS, host, s);
       merged.alerts = Object.assign({}, DEFAULT_SETTINGS.alerts, s.alerts || {});
       merged.alerts.prefs = Object.assign({}, DEFAULT_SETTINGS.alerts.prefs, (s.alerts && s.alerts.prefs) || {});
       return merged;

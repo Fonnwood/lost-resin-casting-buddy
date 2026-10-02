@@ -101,7 +101,7 @@
     const durLabel = E.hasTimer(s) ? (isSec ? 'Seconds' : 'Minutes') : (isSec ? 'Est. seconds' : 'Est. minutes');
     html += '<label class="mini"><span>' + durLabel + '</span><input type="number" inputmode="decimal" step="any" data-type="' + (isSec ? 'seconds' : 'number') + '" data-bind="' + scope + '|profile.stages.' + i + '.minutes" value="' + h(isSec ? Math.round(s.minutes * 60) : s.minutes) + '"' + dis + '></label>';
     if (s.targetC != null || ['ramp', 'hold', 'temperature_wait'].includes(s.type)) {
-      html += '<label class="mini"><span>Target °C</span><input type="number" inputmode="decimal" step="any" data-type="number" data-bind="' + scope + '|profile.stages.' + i + '.targetC" value="' + h(s.targetC == null ? '' : s.targetC) + '"' + dis + ' placeholder="inherit"></label>';
+      html += '<label class="mini"><span>Target °C</span><input type="number" inputmode="decimal" step="any" data-type="tempC" data-bind="' + scope + '|profile.stages.' + i + '.targetC" value="' + h(s.targetC == null ? '' : U.toDisplayTemp(s.targetC)) + '"' + dis + ' placeholder="inherit"></label>';
     }
     if (s.minMinutes != null) html += '<label class="mini"><span>Minimum</span><input type="number" value="' + h(s.minMinutes) + '" disabled></label>';
     if (s.role === 'cool_to_cast') {

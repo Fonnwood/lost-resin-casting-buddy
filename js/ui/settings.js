@@ -25,9 +25,19 @@
     Object.keys(E.ALERT_PREFS).forEach((k) => { html += toggle('settings|alerts.prefs.' + k, s.alerts.prefs[k] !== false, E.ALERT_PREFS[k]); });
     html += btn('testAlert', 'Test alert', 'ghost') + '</section>';
 
+    const opt = (value, label, cur) => '<option value="' + h(value) + '"' + (String(cur) === String(value) ? ' selected' : '') + '>' + h(label) + '</option>';
     html += '<section class="card"><h2>Display</h2>' +
-      field('Theme', '<select data-bind="settings|theme"><option value="dark"' + (s.theme === 'dark' ? ' selected' : '') + '>Dark (workshop)</option><option value="light"' + (s.theme === 'light' ? ' selected' : '') + '>Light</option><option value="auto"' + (s.theme === 'auto' ? ' selected' : '') + '>Follow system</option></select>') +
-      toggle('settings|wakeLock', s.wakeLock, 'Keep screen awake while the app is open' + (A.wakeLockSupported() ? '' : ' (not supported in this browser)')) + '</section>';
+      field('Theme', '<select data-bind="settings|theme">' + opt('dark', 'Dark (workshop)', s.theme) + opt('light', 'Light', s.theme) + opt('auto', 'Follow system', s.theme) + '</select>') +
+      '<div class="grid2">' +
+      field('Temperature unit', '<select data-bind="settings|tempUnit">' + opt('C', '°C (Celsius)', s.tempUnit) + opt('F', '°F (Fahrenheit)', s.tempUnit) + '</select>', 'Display only — profiles always store °C.') +
+      field('Text size', '<select data-type="number" data-bind="settings|textScale">' + [[90, 'Small'], [100, 'Normal'], [115, 'Large'], [130, 'Extra large']].map((o) => opt(o[0], o[1], s.textScale)).join('') + '</select>') +
+      '</div>' +
+      field('Accent colour', '<div class="row2"><input type="color" data-bind="settings|accent" value="' + h(/^#[0-9a-f]{6}$/i.test(s.accent || '') ? s.accent : '#ff9a3c') + '" aria-label="Accent colour">' + btn('accentReset', 'Use theme colour', 'ghost small') + '</div>') +
+      toggle('settings|clock24h', s.clock24h !== false, '24-hour clock') +
+      toggle('settings|wakeLock', s.wakeLock, 'Keep screen awake while the app is open' + (A.wakeLockSupported() ? '' : ' (not supported in this browser)')) +
+      '<details class="stage-editor"><summary>Custom CSS</summary>' +
+      field('Your own styles', '<textarea rows="6" spellcheck="false" data-bind="settings|customCss" placeholder=":root { --radius: 4px; --card: #101820; }">' + h(s.customCss || '') + '</textarea>', 'Applied last, on this device only. Colours and sizes are CSS variables — see docs/CUSTOMISING.md.') +
+      '</details></section>';
 
     html += '<section class="card"><h2>Process profiles</h2><p class="hint">New runs copy a profile. Editing a profile never changes past or active runs.</p>';
     app.profiles.forEach((p) => {
@@ -59,7 +69,7 @@
     html += '<section class="card"><h2>Settings</h2>';
     Object.keys(p.params).forEach((k) => {
       const par = p.params[k];
-      html += '<div class="param-edit">' + field(h(par.label) + ' <small>' + h(par.unit) + '</small>', numInput(scope + '|params.' + k + '.value', par.value)) +
+      html += '<div class="param-edit">' + field(h(par.label) + ' <small>' + h(par.unit) + '</small>', numInput(scope + '|params.' + k + '.value', par.value, '', par.unit === '°C')) +
         field('Evidence', provSelect(scope + '|params.' + k + '.sourceType', par.sourceType)) + '</div>' + (par.note ? '<p class="hint">' + h(par.note) + '</p>' : '');
     });
     html += '</section>';
@@ -85,7 +95,7 @@
     html += '<div class="grid2">' + field('Name', '<input type="text" data-bind="' + b + 'name" value="' + h(s.name) + '">') + field('Timeline label', '<input type="text" data-bind="' + b + 'short" value="' + h(s.short || '') + '">') + '</div>';
     html += '<div class="grid2">' + field('Phase', '<input type="text" list="phase-ids" pattern="[a-z0-9_]+" data-bind="' + b + 'phase" value="' + h(s.phase) + '">', 'Stages with the same phase id are grouped under one heading.') + field('Type', select(b + 'type', P.STAGE_TYPES, s.type)) + '</div>';
     html += '<div class="grid2">' + field('Control', select(b + 'control', { user: 'You confirm', kiln: 'Kiln programme (auto)' }, s.control)) + field('Duration unit', select(b + 'unit', { min: 'minutes', s: 'seconds' }, s.unit || 'min')) + '</div>';
-    html += '<div class="grid3">' + field('Minutes', numInput(b + 'minutes', s.minutes)) + field('Minimum', numInput(b + 'minMinutes', s.minMinutes)) + field('Target °C', numInput(b + 'targetC', s.targetC)) + '</div>';
+    html += '<div class="grid3">' + field('Minutes', numInput(b + 'minutes', s.minutes)) + field('Minimum', numInput(b + 'minMinutes', s.minMinutes)) + field('Target °C', numInput(b + 'targetC', s.targetC, '', true)) + '</div>';
     html += '<div class="grid3">' + field('Time evidence', provSelect(b + 'provenance.duration', pv.duration)) + field('Minimum evidence', provSelect(b + 'provenance.minimum', pv.minimum)) + field('Temp evidence', provSelect(b + 'provenance.target', pv.target)) + '</div>';
     html += refLine(s);
     html += field('What to do now', '<textarea rows="2" data-bind="' + b + 'doNow">' + h(s.doNow || '') + '</textarea>', 'Placeholders: {targetC} {startC} {waterMl} {powderG} {waterRatioPct} {metal} {metalTargetC} {remaining}');
