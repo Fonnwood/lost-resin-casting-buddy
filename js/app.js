@@ -127,7 +127,15 @@
   }
 
   function renderModal() {
-    $('#modal').innerHTML = UI.renderModal(app, Date.now());
+    try {
+      $('#modal').innerHTML = UI.renderModal(app, Date.now());
+    } catch (err) {
+      // A modal that cannot draw must not stay "open" and block everything behind it.
+      console.error(err);
+      app.modal = null;
+      $('#modal').innerHTML = '';
+      return;
+    }
     const first = $('#modal input, #modal select');
     if (first && app.modal && app.modal.type !== 'attention') first.focus({ preventScroll: true });
   }
@@ -162,6 +170,21 @@
   // ---------------------------------------------------------------- tick
 
   function tick() {
+    try { tickRun(); } catch (err) { console.error(err); }
+    try { render(false); } catch (err) { console.error(err); renderFailure(err); }
+  }
+
+  /** Last-resort screen if a view cannot draw: the user still gets a way out. */
+  function renderFailure(err) {
+    const root = $('#view');
+    app.lastHtml = { view: null, html: null };
+    root.innerHTML = '<section class="card"><h2>Something went wrong showing this screen</h2><p class="hint">' + U.esc(String(err && err.message || err)) + '</p>' +
+      '<p>Your run is saved. You can reload, or use the tabs below to move around.</p>' +
+      '<button type="button" class="btn primary xl" data-action="reload">Reload</button>' +
+      '<button type="button" class="btn ghost" data-action="nav" data-arg="run">Open RUN screen</button></section>';
+  }
+
+  function tickRun() {
     const now = Date.now();
     const run = app.activeRun();
     if (run && run.status === 'active') {
@@ -186,7 +209,6 @@
       run.lastSeenAt = now;
       if (advanced.length || now - lastSave > 15000) save();
     }
-    render(false);
   }
 
   function markSeen() {
@@ -307,8 +329,13 @@
       }
       E.completeCurrent(run, now);
     }),
+    resetStage: () => withRun((run, now) => { if (E.restartCurrent(run, now)) toast('Timer reset — this step restarted from now.'); }),
+    skipStage: () => openModal({ type: 'confirm', title: 'Skip this step?', text: 'Marks the current step finished now and starts the next one. You can undo it straight afterwards.', yes: 'Skip step', onYes: () => withRun((run, now) => { if (E.skipCurrent(run, now)) toast('Moved on to the next step.'); }) }),
+    backStage: () => withRun((run, now) => { if (E.backOne(run, now)) toast('Back on the previous step, restarted from now.'); }),
+    completeAnyway: (arg) => openModal({ type: 'confirm', title: 'Continue to casting?', text: 'Still waiting on: ' + (arg || 'a gate') + '. Only continue if you have checked the flask and metal yourself — the manufacturer soak minimum protects the mould.', yes: 'Continue anyway', onYes: () => withRun((run, now) => E.completeCurrent(run, now)) }),
     extend: (arg) => withRun((run, now) => {
       const s = run.profile.stages[E.currentIndex(run)];
+      if (!s) return;
       E.extend(run, s.id, Number(arg), now);
       toast('+' + arg + ' min on “' + s.name + '”' + (s.control === 'kiln' ? ' — extend the kiln controller too.' : '.'));
     }),
@@ -317,10 +344,10 @@
       const v = Number($('#ext-min').value);
       closeModal();
       if (!v) return;
-      withRun((run, now) => E.extend(run, run.profile.stages[E.currentIndex(run)].id, v, now));
+      withRun((run, now) => { const s = run.profile.stages[E.currentIndex(run)]; if (s) E.extend(run, s.id, v, now); });
     },
-    pause: () => withRun((run, now) => E.pause(run, run.profile.stages[E.currentIndex(run)].id, now)),
-    resume: () => withRun((run, now) => E.resume(run, run.profile.stages[E.currentIndex(run)].id, now)),
+    pause: () => withRun((run, now) => { const s = run.profile.stages[E.currentIndex(run)]; if (s) E.pause(run, s.id, now); }),
+    resume: () => withRun((run, now) => { const s = run.profile.stages[E.currentIndex(run)]; if (s) E.resume(run, s.id, now); }),
     undo: () => withRun((run) => { const u = E.undoable(run); if (E.undo(run)) toast('Undone: ' + u.label); }),
     metalStart: () => withRun((run, now) => E.metalStart(run, now)),
     metalReady: () => withRun((run, now) => E.metalReady(run, now)),
@@ -330,6 +357,7 @@
     kilnSyncOpen: () => openModal({ type: 'kilnSync' }),
     syncPick: (arg) => { app.modal.selected = Number(arg); renderModal(); },
     kilnSyncApply: (arg) => {
+      if (arg == null) { closeModal(); return; }
       const mins = Number($('#sync-min').value);
       closeModal();
       withRun((run, now) => E.kilnSync(run, Number(arg), mins, now));
@@ -381,7 +409,8 @@
       const d = run.resultDraft || {};
       if (!d.rating && !confirm('No result rating yet. Complete the run anyway?')) return;
       const now = Date.now();
-      const checks = run.checks[run.profile.stages[E.currentIndex(run)].id] || {};
+      const last = run.profile.stages[Math.min(E.currentIndex(run), run.profile.stages.length - 1)];
+      const checks = (last && run.checks[last.id]) || {};
       E.completeRun(run, Object.assign({ defects: [], notes: '' }, d, { followUp: checks }), now);
       delete run.resultDraft;
       app.activeRunId = null;
@@ -410,6 +439,7 @@
     },
     confirmYes: () => { const m = app.modal; closeModal(); if (m && m.onYes) m.onYes(); },
     closeModal: () => closeModal(),
+    reload: () => location.reload(),
     dismissBanner: () => { app.banner = null; renderChrome(); },
     safetyAck: () => { app.settings.safetyAcknowledged = true; saveSettings(); closeModal(); },
     setRatio: (arg) => withRun((run, now) => {
@@ -553,6 +583,7 @@
 
   function onClick(e) {
     A.unlockAudio();
+    if (app.modal && e.target.classList && e.target.classList.contains('modal-backdrop')) { closeModal(); return; }
     const el = e.target.closest('[data-action]');
     if (!el || el.disabled) return;
     if (el.tagName === 'INPUT') return;
@@ -594,6 +625,7 @@
     document.addEventListener('click', onClick);
     document.addEventListener('change', onChange);
     document.addEventListener('input', onInput);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && app.modal) closeModal(); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') markSeen(); else tick(); });
     window.addEventListener('pagehide', markSeen);
     window.addEventListener('storage', (e) => {
