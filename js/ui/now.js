@@ -19,7 +19,9 @@
     const sched = E.schedule(run, now);
     const i = sched.cur;
     const stages = run.profile.stages;
-    if (i >= stages.length) return { html: '<section class="card"><h2>Run finished</h2>' + btn('nav', 'View history', 'primary', 'history') + '</section>', live: c.live };
+    if (i >= stages.length) {
+      return { html: '<section class="card"><h2>All steps complete</h2><p>Record the result to finish this run.</p>' + resultForm('run', run.resultDraft || {}) + btn('completeRun', 'SAVE RESULTS & COMPLETE RUN', 'primary xl') + btn('backStage', '← Back to previous step', 'ghost') + '</section>', live: c.live };
+    }
 
     const row = sched.rows[i];
     const s = row.stage;
@@ -49,6 +51,9 @@
     }
 
     const u = E.undoable(run);
+    html += '<section class="card escape"><div class="eyebrow">TIMER STUCK OR WRONG?</div><div class="row3">' +
+      btn('resetStage', '↺ Reset timer', 'ghost small') + btn('skipStage', 'Skip step →', 'ghost small') + (i > 0 ? btn('backStage', '← Previous step', 'ghost small') : '') +
+      '</div></section>';
     html += '<div class="footer-actions">' + (u ? btn('undo', '↶ Undo: ' + h(u.label), 'ghost small') : '') + btn('nav', 'Full timeline', 'ghost small', 'timeline') + '</div>';
     return { html, live: c.live };
   }
@@ -159,7 +164,7 @@
             actions = '<div class="row2">' + btn('mark', 'QUENCH NOW', 'primary xl', 'quench') + btn('extend', 'WAIT LONGER +5 MIN', 'secondary xl', 5) + '</div>';
           } else {
             body = '<div class="banner-warn">DO NOT QUENCH YET</div>' + body;
-            actions = extendRow(s);
+            actions = extendRow(s) + btn('mark', 'Quench early', 'ghost', 'quench');
           }
         } else {
           actions = btn('complete', h(s.completeLabel || 'COMPLETE NOW'), (overdue || kiln ? 'primary' : 'secondary') + ' xl');
@@ -209,7 +214,8 @@
           const waiting = [];
           if (!flask.timeReached) waiting.push('flask soak');
           if (metal.status !== 'ready') waiting.push('metal confirmation');
-          actions += '<button type="button" class="btn primary xl" disabled>Casting unlocks after: ' + h(waiting.join(' + ')) + '</button>';
+          actions += '<button type="button" class="btn primary xl" disabled>Casting unlocks after: ' + h(waiting.join(' + ')) + '</button>' +
+            btn('completeAnyway', 'Continue to casting anyway…', 'ghost', waiting.join(' + '));
         }
         const prep = run.profile.stages.find((x) => x.role === 'cast_prep');
         if (prep && prep.checklist && prep.checklist.length) {

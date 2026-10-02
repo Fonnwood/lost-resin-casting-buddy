@@ -204,7 +204,7 @@ const MIN = 60000;
   // Importing a broken profile explains what is wrong instead of failing silently
   await page.getByRole('button', { name: '← Done' }).click();
   await page.locator('input[data-action-change="importProfile"]').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ name: 'Bad', stages: [{ id: 'a', type: 'nonsense' }] })) });
-  await expectText('Import failed');
+  await page.getByText('Import failed').first().waitFor({ timeout: 3000 });
 
   // Light theme renders
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));

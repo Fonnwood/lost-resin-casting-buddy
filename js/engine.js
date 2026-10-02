@@ -217,6 +217,42 @@
     push(run, evs, opts.by);
   }
 
+  /**
+   * Escape hatches. These work on any stage, regardless of the gating that
+   * normal buttons enforce (soak minimum, metal confirmation, cooling timer),
+   * so the user can never be stuck behind a timer. Each is one undoable group.
+   */
+
+  /** Restart the current stage's timer from `now` (clears extensions, pauses and kiln syncs). */
+  function restartCurrent(run, now) {
+    const cur = currentIndex(run);
+    const stages = run.profile.stages;
+    if (cur >= stages.length) return false;
+    push(run, [{ type: 'STAGE_START', t: now, stageId: stages[cur].id, label: 'Reset timer on “' + stages[cur].name + '”' }]);
+    return true;
+  }
+
+  /** Move on to the next stage right now, whatever state the current one is in. */
+  function skipCurrent(run, now) {
+    if (currentIndex(run) >= run.profile.stages.length) return false;
+    completeCurrent(run, now);
+    return true;
+  }
+
+  /** Step back to the previous stage and restart it from `now`. From the very end, reopens the last stage. */
+  function backOne(run, now) {
+    const stages = run.profile.stages;
+    const cur = currentIndex(run);
+    const target = cur >= stages.length ? stages.length - 1 : cur - 1;
+    if (target < 0) return false;
+    const evs = [];
+    if (cur < stages.length) evs.push({ type: 'STAGE_UNSTART', t: now, stageId: stages[cur].id });
+    evs.push({ type: 'STAGE_REOPEN', t: now, stageId: stages[target].id, label: 'Back to “' + stages[target].name + '”' });
+    evs.push({ type: 'STAGE_START', t: now, stageId: stages[target].id });
+    push(run, evs);
+    return true;
+  }
+
   function extend(run, stageId, minutes, now) {
     if (!minutes) return;
     push(run, [{ type: 'EXTEND', t: now, stageId, minutes: Number(minutes) }]);
@@ -352,6 +388,8 @@
   };
 
   function describe(run, group) {
+    const labelled = group.find((x) => x.label);
+    if (labelled) return labelled.label;
     const e = group.find((x) => x.type === 'MARK') || group.find((x) => x.type !== 'STAGE_START') || group[0];
     switch (e.type) {
       case 'STAGE_DONE': return 'Complete “' + stageName(run, e.stageId) + '”';
@@ -714,7 +752,7 @@
   CPT.Engine = {
     TIMER_TYPES, CAST_STEPS, MARK_LABELS, ALERT_PREFS, ALERT_STALE_MS,
     hasTimer, minutesOf, newRun, runtime, plannedEnd, currentIndex, schedule, castIndex, planAnchorIndex, indexOfRole,
-    startRun, completeCurrent, extend, pause, resume, kilnSync, advance, metalStart, metalReady, metalReset,
+    startRun, completeCurrent, restartCurrent, skipCurrent, backOne, extend, pause, resume, kilnSync, advance, metalStart, metalReady, metalReset,
     confirmFlask, mark, logEdit, completeRun, abandonRun, undoable, undo, refreshStatus,
     flaskInfo, metalInfo, runState, stageEvents, alertCandidates, dueAlerts, markAlerts, attention, stageEndText,
     planFromCastTime, waterMl, calculator, deviations, record, calendar,

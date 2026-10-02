@@ -32,13 +32,14 @@
         break;
       }
       case 'kilnSync': {
+        if (!run) break;
         const cur = E.currentIndex(run);
         const kilnStages = run.profile.stages.map((s, i) => ({ s, i })).filter((x) => x.s.control === 'kiln');
         const sel = m.selected != null ? m.selected : (kilnStages.find((x) => x.i >= cur) || kilnStages[0] || {}).i;
         body = '<h2>Where is the kiln programme?</h2><p class="hint">Pick the segment the kiln controller is showing, and how long it has left. Later times will be recalculated from this.</p><div class="choices">' +
           kilnStages.map((x) => '<button type="button" class="check' + (x.i === sel ? ' on' : '') + '" data-action="syncPick" data-arg="' + x.i + '"><span class="box">' + (x.i === sel ? '●' : '') + '</span><span>' + h(x.s.name) + ' <small class="muted">' + h(U.dur(x.s.minutes)) + '</small></span></button>').join('') + '</div>' +
           field('Minutes left in that segment', '<input type="number" inputmode="numeric" id="sync-min" value="' + h(sel != null ? run.profile.stages[sel].minutes : 0) + '">') +
-          '<div class="row2">' + btn('kilnSyncApply', 'Apply', 'primary xl', sel) + btn('closeModal', 'Cancel', 'ghost') + '</div>';
+          '<div class="row2">' + (sel != null ? btn('kilnSyncApply', 'Apply', 'primary xl', sel) : '') + btn('closeModal', 'Cancel', 'ghost') + '</div>';
         break;
       }
       case 'attention': {
