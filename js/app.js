@@ -364,6 +364,16 @@
       if (!app.settings.safetyAcknowledged) openModal({ type: 'safety' }); else renderModal();
       go('run');
     },
+    applyMetalWeight: () => withRun((run, now) => {
+      const par = run.profile.params.metalWeightG;
+      if (!par) { toast('This profile has no metal weight value.'); return; }
+      const grams = E.metalCalc(run.values.metalCalc).recommendedG;
+      if (!grams) { toast('Enter the resin amount first.'); return; }
+      const before = par.value;
+      P.editParam(par, grams);
+      E.logEdit(run, 'params.metalWeightG.value', before, grams, now);
+      toast('Metal weight set to ' + grams + ' g.');
+    }),
     startRun: () => withRun((run, now) => {
       E.startRun(run, now);
       A.unlockAudio();

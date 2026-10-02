@@ -37,7 +37,7 @@
       profileId: profile.id,
       profileName: profile.name,
       profile: snap,
-      values: { modelName: '', displacementMl: 0, notes: '' },
+      values: { modelName: '', displacementMl: 0, notes: '', metalCalc: null },
       plan: null,
       events: [],
       checks: {},
@@ -661,6 +661,52 @@
     };
   }
 
+  /** Approximate densities in g/cm³ — alloys vary by supplier, so every one can be overridden. */
+  const METALS = {
+    brass_c121: { label: 'Brass C121', density: 8.45 },
+    silicon_bronze: { label: 'Silicon bronze', density: 8.7 },
+    tin_bronze: { label: 'Tin bronze', density: 8.8 },
+    copper: { label: 'Copper', density: 8.96 },
+    sterling: { label: 'Sterling silver (925)', density: 10.36 },
+    fine_silver: { label: 'Fine silver', density: 10.49 },
+    gold_9k: { label: '9 ct yellow gold', density: 11.6 },
+    gold_14k: { label: '14 ct yellow gold', density: 13.0 },
+    gold_18k: { label: '18 ct yellow gold', density: 15.5 },
+    pewter: { label: 'Pewter (lead-free)', density: 7.3 },
+    aluminium: { label: 'Aluminium (A356)', density: 2.68 },
+    custom: { label: 'Custom density…', density: 8.45 },
+  };
+  const METAL_CALC_DEFAULTS = { metal: 'brass_c121', customDensity: 8.45, resinAmount: 0, resinUnit: 'ml', resinDensity: 1.1, waxG: 0, waxDensity: 0.95, allowancePct: 15 };
+
+  /** Metal needed for a pattern of resin (slicer ml, or weighed g) plus optional wax (g). */
+  function metalCalc(saved) {
+    const v = Object.assign({}, METAL_CALC_DEFAULTS, saved || {});
+    const n = (x, d) => Math.max(0, U.num(x, d));
+    const resinDensity = n(v.resinDensity, METAL_CALC_DEFAULTS.resinDensity);
+    const waxDensity = n(v.waxDensity, METAL_CALC_DEFAULTS.waxDensity);
+    const resinMl = v.resinUnit === 'g' ? (resinDensity ? n(v.resinAmount, 0) / resinDensity : 0) : n(v.resinAmount, 0);
+    const waxMl = waxDensity ? n(v.waxG, 0) / waxDensity : 0;
+    const patternMl = resinMl + waxMl;
+    const allowance = n(v.allowancePct, 0) / 100;
+    const metalFor = (density) => {
+      const net = patternMl * density;
+      return { netG: net, totalG: net * (1 + allowance) };
+    };
+    const densityOf = (key) => (key === 'custom' ? n(v.customDensity, 0) : (METALS[key] || METALS.brass_c121).density);
+    const key = METALS[v.metal] ? v.metal : 'brass_c121';
+    const sel = metalFor(densityOf(key));
+    return {
+      input: v,
+      metal: key,
+      density: densityOf(key),
+      patternMl: U.round(patternMl, 1),
+      netG: U.round(sel.netG, 1),
+      totalG: U.round(sel.totalG, 1),
+      recommendedG: Math.ceil(sel.totalG),
+      others: Object.keys(METALS).filter((k) => k !== 'custom').map((k) => ({ key: k, label: METALS[k].label, density: METALS[k].density, totalG: U.round(metalFor(METALS[k].density).totalG, 0) })),
+    };
+  }
+
   /** Per-stage planned vs actual for the history view. */
   function deviations(run) {
     const sched = schedule(run, Date.now());
@@ -755,6 +801,6 @@
     startRun, completeCurrent, restartCurrent, skipCurrent, backOne, extend, pause, resume, kilnSync, advance, metalStart, metalReady, metalReset,
     confirmFlask, mark, logEdit, completeRun, abandonRun, undoable, undo, refreshStatus,
     flaskInfo, metalInfo, runState, stageEvents, alertCandidates, dueAlerts, markAlerts, attention, stageEndText,
-    planFromCastTime, waterMl, calculator, deviations, record, calendar,
+    planFromCastTime, waterMl, calculator, METALS, METAL_CALC_DEFAULTS, metalCalc, deviations, record, calendar,
   };
 })(globalThis.CPT = globalThis.CPT || {});

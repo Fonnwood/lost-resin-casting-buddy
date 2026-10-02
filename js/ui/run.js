@@ -7,7 +7,7 @@
   const P = CPT.Profile;
   const E = CPT.Engine;
   const h = U.esc;
-  const { ctx, prov, btn, refLine, kilnProgramBlock, field, numInput, paramField, planBlock } = CPT.UI.lib;
+  const { ctx, prov, btn, refLine, kilnProgramBlock, field, numInput, paramField, planBlock, select } = CPT.UI.lib;
 
   function renderRun(app, now) {
     const c = ctx();
@@ -49,6 +49,8 @@
       '<div class="grid2">' + paramField('run', p, 'metalTargetC') + paramField('run', p, 'metalHeatMinutes') + '</div>' +
       '<div class="grid2">' + paramField('run', p, 'metalWeightG') + paramField('run', p, 'metalReadyOffsetMinutes') + '</div>' +
       '</section>';
+
+    html += metalCalcCard(run, c);
 
     html += '<section class="card"><h2>Plan from casting time</h2>' + planBlock(run, now) + '</section>';
 
@@ -113,6 +115,35 @@
     if (s.minMinutes != null && Number(s.minutes) < Number(s.minMinutes)) html += '<div class="refline">⚠ Below the minimum of ' + h(U.dur(s.minMinutes)) + (pv.minimum === 'manufacturer' ? ' (manufacturer)' : '') + '</div>';
     html += '<div class="provrow">' + (pv.target && s.targetC != null ? prov(pv.target, 'Temp') : '') + (pv.duration ? prov(pv.duration, E.hasTimer(s) ? 'Time' : 'Estimate') : '') + (pv.minimum ? prov(pv.minimum, 'Min') : '') + '</div>' + refLine(s) + '</div>';
     return html;
+  }
+
+  /** Metal weight calculator: pattern volume (slicer ml, or resin g) + wax g, times alloy density. */
+  function metalCalcCard(run, c) {
+    const m = E.metalCalc(run.values.metalCalc);
+    const v = m.input;
+    const bind = (k) => 'run|values.metalCalc.' + k;
+    const metals = {};
+    Object.keys(E.METALS).forEach((k) => { metals[k] = E.METALS[k].label + (k === 'custom' ? '' : ' · ' + E.METALS[k].density + ' g/cm³'); });
+    return '<section class="card"><h2>Metal weight calculator</h2>' +
+      '<p class="hint">Enter the pattern from your slicer (resin volume in ml) or weigh it (resin and wax in g). Densities are typical values — alloys and resins vary, so check yours.</p>' +
+      field('Alloy', select(bind('metal'), metals, m.metal)) +
+      (m.metal === 'custom' ? field('Alloy density <small>g/cm³</small>', numInput(bind('customDensity'), v.customDensity)) : '') +
+      '<div class="grid2">' +
+      field('Resin amount', numInput(bind('resinAmount'), v.resinAmount || null)) +
+      field('Resin unit', select(bind('resinUnit'), { ml: 'ml (from slicer)', g: 'g (weighed)' }, v.resinUnit)) +
+      '</div><div class="grid2">' +
+      field('Wax weight <small>g (optional)</small>', numInput(bind('waxG'), v.waxG || null)) +
+      field('Sprue / button allowance <small>%</small>', numInput(bind('allowancePct'), v.allowancePct), 'Extra metal for the sprue, button and a safety margin.') +
+      '</div><div class="grid2">' +
+      field('Resin density <small>g/cm³</small>', numInput(bind('resinDensity'), v.resinDensity), v.resinUnit === 'g' ? 'Used to turn resin grams into volume.' : 'Only used when resin is entered in grams.') +
+      field('Wax density <small>g/cm³</small>', numInput(bind('waxDensity'), v.waxDensity)) +
+      '</div>' +
+      '<div class="calc-out"><div><span class="k">Pattern volume</span><span class="v">' + c.L('mcVol', m.patternMl + ' ml') + '</span></div>' +
+      '<div><span class="k">Metal (net)</span><span class="v">' + c.L('mcNet', m.netG + ' g') + '</span></div>' +
+      '<div><span class="k">Metal to melt</span><span class="v big">' + c.L('mcTotal', m.recommendedG + ' g') + '</span></div></div>' +
+      '<div class="row2">' + btn('applyMetalWeight', 'Use ' + c.L('mcUse', m.recommendedG + ' g') + ' as metal weight', 'primary') + '</div>' +
+      '<details><summary>Same pattern in other metals</summary><div class="kv">' + m.others.map((o) => '<div><span class="k">' + h(o.label) + '</span><span class="v">' + c.L('mcAlt_' + o.key, o.totalG + ' g') + '</span></div>').join('') + '</div></details>' +
+      '</section>';
   }
 
   CPT.UI.renderRun = renderRun;
