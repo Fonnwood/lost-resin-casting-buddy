@@ -502,14 +502,37 @@
       toast('Water ratio ' + arg + ':100 — ' + E.waterMl(run.profile) + ' ml water.' + (note ? ' ' + note : ''));
     }),
     planOpen: () => openModal({ type: 'plan' }),
-    planPreset: (arg) => withRun((run) => {
-      const d = new Date();
-      d.setDate(d.getDate() + 1);
-      const [hh, mm] = arg.split(':').map(Number);
-      d.setHours(hh, mm, 0, 0);
-      run.plan = { castAt: d.getTime() };
-      if (app.modal && app.modal.type === 'plan') renderModal();
+    planAt: (arg) => withRun((run, now) => {
+      const MIN = U.MIN;
+      const stages = run.profile.stages;
+      const raw = run.plan || {};
+      let idx = raw.stageId ? stages.findIndex((s) => s.id === raw.stageId) : -1;
+      if (idx < 0) idx = E.defaultPlanIndex(run.profile);
+      const edge = raw.edge === 'end' ? 'end' : 'start';
+      const base = { stageId: stages[idx].id, edge, at: now };
+      let at;
+      if (arg === 'earliest') {
+        // Round up to the next whole minute so the plan is never in the past.
+        at = Math.ceil(E.planAround(run.profile, run.values, base, now).earliest / MIN) * MIN;
+      } else {
+        at = Math.ceil((now + Number(arg) * MIN) / MIN) * MIN;
+      }
+      run.plan = { stageId: base.stageId, edge, at, locked: false };
     }),
+    planStageMinutes: (arg) => withRun((run, now) => {
+      const [i, m] = String(arg).split(':').map(Number);
+      const st = run.profile.stages[i];
+      if (!st || run.status !== 'draft' || Number(st.minutes) === m) return;
+      const before = st.minutes;
+      const note = P.editStageField(st, 'minutes', m);
+      E.logEdit(run, 'profile.stages.' + i + '.minutes', before, m, now);
+      if (note) toast(note);
+    }),
+    planLock: () => withRun((run) => {
+      const plan = E.planOf(run.profile, run.plan);
+      if (plan) run.plan = { stageId: plan.stageId, edge: plan.edge, at: plan.at, locked: true };
+    }),
+    planUnlock: () => withRun((run) => { if (run.plan) run.plan.locked = false; }),
     planClear: () => withRun((run) => { run.plan = null; if (app.modal && app.modal.type === 'plan') renderModal(); }),
     exportRun: (arg) => {
       const run = arg ? historyRun(arg) : app.activeRun();
@@ -645,7 +668,7 @@
     if (!fn) return;
     e.preventDefault();
     fn(el.getAttribute('data-arg'));
-    if (app.modal && app.modal.type === 'plan' && el.closest('#view')) renderModal();
+    if (app.modal && app.modal.type === 'plan') renderModal();
   }
 
   function onChange(e) {

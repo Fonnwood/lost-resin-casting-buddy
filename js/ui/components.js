@@ -215,30 +215,92 @@
     return html;
   }
 
+  /** Milestone picker for the planner: every stage, grouped by phase. */
+  function planStageSelect(run, selectedId) {
+    const groups = [];
+    run.profile.stages.forEach((st) => {
+      let g = groups[groups.length - 1];
+      if (!g || g.phase !== st.phase) { g = { phase: st.phase, items: [] }; groups.push(g); }
+      g.items.push(st);
+    });
+    return '<select data-bind="run|plan.stageId">' + groups.map((g) => '<optgroup label="' + h(P.phaseLabel(run.profile, g.phase)) + '">' +
+      g.items.map((st) => '<option value="' + h(st.id) + '"' + (st.id === selectedId ? ' selected' : '') + '>' + h(st.short || st.name) + '</option>').join('') + '</optgroup>').join('') + '</select>';
+  }
+
+  /** Quick duration choices for the anchor stage (e.g. the 90 min bench rest → 2 h, 2½ h). */
+  function planDurationBlock(run, index) {
+    const st = run.profile.stages[index];
+    if (st.unit === 's' || !(Number(st.minutes) > 0)) return '';
+    const mins = Number(st.minutes);
+    let html = field('How long should “' + h(st.short || st.name) + '” be? <small>(minutes)</small>', numInput('run|profile.stages.' + index + '.minutes', st.minutes, ' min="0"'),
+      st.minMinutes != null ? 'Minimum ' + h(U.dur(st.minMinutes)) + (st.provenance && st.provenance.minimum === 'manufacturer' ? ' (manufacturer)' : '') + '. Longer is fine — everything after it moves later.' : 'Everything after it moves later.');
+    if (st.minMinutes != null) {
+      const base = Number(st.minMinutes);
+      const opts = [base, base + 30, base + 60].map((m) => '<button type="button" class="btn ghost small' + (m === mins ? ' on' : '') + '" data-action="planStageMinutes" data-arg="' + index + ':' + m + '" aria-pressed="' + (m === mins) + '">' + h(U.dur(m)) + '</button>');
+      html += '<div class="row2">' + opts.join('') + '</div>';
+    }
+    return html;
+  }
+
   function planBlock(run, now) {
-    const castAt = run.plan && run.plan.castAt;
-    let html = field('I want to cast at', '<input type="datetime-local" data-bind="run|plan.castAt" data-type="datetime" value="' + (castAt ? U.toLocalInput(castAt) : '') + '">',
-      'Works backwards through every stage. Cool-down and manual steps use estimates.');
-    if (!castAt) return html + '<div class="row2">' + btn('planPreset', 'Tomorrow 09:00', 'ghost', '09:00') + btn('planPreset', 'Tomorrow 10:00', 'ghost', '10:00') + '</div>';
+    const raw = run.plan || {};
+    const profile = run.profile;
+    const stages = profile.stages;
+    const plan = E.planOf(profile, run.plan);
+    let idx = plan ? plan.index : (raw.stageId ? stages.findIndex((s) => s.id === raw.stageId) : -1);
+    if (idx < 0) idx = E.defaultPlanIndex(profile);
+    const stage = stages[idx];
+    const edge = plan ? plan.edge : (raw.edge === 'end' ? 'end' : 'start');
+    const name = stage.short || stage.name;
+
+    // Locked: show the committed plan and a way back.
+    if (plan && plan.locked && run.status === 'draft') {
+      const p = E.planAround(profile, run.values, plan, now);
+      return '<p class="lockedplan">🔒 <strong>Locked in:</strong> ' + h(name) + ' ' + (edge === 'end' ? 'ends' : 'starts') + ' at <strong>' + h(U.clock(plan.at, now)) + '</strong></p>' +
+        planTable(run, p, now) + '<div class="row2">' + btn('planUnlock', 'Unlock to change', 'ghost small') + btn('planClear', 'Clear plan', 'ghost small') + '</div>';
+    }
+
+    let html = '<p class="hint">Pick any point in the process, say when it should happen, and every other step is worked out around it.</p>' +
+      field('Plan around', planStageSelect(run, stages[idx].id)) +
+      field('This step', '<select data-bind="run|plan.edge"><option value="start"' + (edge === 'start' ? ' selected' : '') + '>starts at</option><option value="end"' + (edge === 'end' ? ' selected' : '') + '>ends at</option></select>') +
+      field('Time', '<input type="datetime-local" data-bind="run|plan.at" data-type="datetime" value="' + (plan ? U.toLocalInput(plan.at) : '') + '">');
+    html += planDurationBlock(run, idx);
+
+    const earliestPlan = E.planAround(profile, run.values, { stageId: stage.id, edge, at: now }, now);
+    const quick = [btn('planAt', 'Earliest possible (' + h(U.clock(earliestPlan.earliest, now)) + ')', 'ghost small', 'earliest')];
+    [15, 30].forEach((m) => quick.push(btn('planAt', 'In ' + m + ' min', 'ghost small', String(m))));
+    html += '<div class="row2">' + quick.join('') + '</div>';
+
+    if (!plan) return html + '<p class="hint">Choose a time to see the whole schedule.</p>';
     if (run.status === 'draft') {
-      const plan = E.planFromCastTime(run.profile, run.values, castAt, now);
-      if (plan.tooLate) html += '<p class="warnbox">Too soon. Earliest casting time if you start now: <strong>' + h(U.clock(plan.earliest, now)) + '</strong>.</p>';
-      html += '<table class="plan"><tbody>' +
-        '<tr><th>Start run (prepare tree)</th><td>' + h(U.clock(plan.startAt, now)) + '</td></tr>' +
-        '<tr><th>Start investing</th><td>' + h(U.clock(plan.investAt, now)) + '</td></tr>' +
-        '<tr><th>Flask into kiln · start programme</th><td>' + h(U.clock(plan.kilnStartAt, now)) + '</td></tr>' +
-        '<tr><th>Reach casting temp · start soak</th><td>' + h(U.clock(plan.soakStartAt, now)) + ' <em>est.</em></td></tr>' +
-        '<tr><th>Start ' + h(run.profile.materials.metal) + ' furnace</th><td>' + h(U.clock(plan.metalStartAt, now)) + ' <em>est.</em></td></tr>' +
-        '<tr><th>Flask ready · cast</th><td><strong>' + h(U.clock(plan.flaskReadyAt, now)) + '</strong></td></tr>' +
-        '</tbody></table><p class="hint">The 750 → casting-temperature cool-down depends on your kiln; its time is an estimate.</p>';
+      const p = E.planAround(profile, run.values, plan, now);
+      if (p.tooLate) {
+        html += '<p class="warnbox">That doesn’t work: starting right now, ' + h(name) + ' can’t ' + (edge === 'end' ? 'end' : 'start') + ' before <strong>' + h(U.clock(p.earliest, now)) + '</strong>. Use the earliest time above, shorten a step, or pick a different point to plan around.</p>';
+      } else {
+        html += planTable(run, p, now) + btn('planLock', '🔒 Lock in this plan', 'primary xl');
+      }
     } else {
       const sched = E.schedule(run, now);
-      const castRow = sched.rows[E.planAnchorIndex(run.profile)];
-      const diff = Math.round((castRow.start - castAt) / MIN);
-      html += '<p>Projected ready to cast: <strong>' + h(U.clock(castRow.start, now)) + '</strong> ' + (diff === 0 ? '(on plan)' : '(' + (diff > 0 ? diff + ' min later' : -diff + ' min earlier') + ' than planned)') + '</p>';
+      const row = sched.rows[plan.index];
+      const projected = plan.edge === 'end' ? row.end : row.start;
+      const diff = Math.round((projected - plan.at) / MIN);
+      html += '<p>Projected ' + h(name) + ' ' + (edge === 'end' ? 'end' : 'start') + ': <strong>' + h(U.clock(projected, now)) + '</strong> ' + (diff === 0 ? '(on plan)' : '(' + (diff > 0 ? diff + ' min later' : -diff + ' min earlier') + ' than planned)') + '</p>';
     }
     html += btn('planClear', 'Clear plan', 'ghost small');
     return html;
+  }
+
+  function planTable(run, plan, now) {
+    const a = plan.rows[plan.anchor.index];
+    const rows = [];
+    rows.push('<tr class="anchor"><th>▶ ' + h(a.stage.short || a.stage.name) + '</th><td>' + h(U.clock(a.start, now)) + ' – ' + h(U.clock(a.end, now)) + ' <em>(' + h(U.dur(a.stage.minutes, a.stage.unit)) + ')</em></td></tr>');
+    rows.push('<tr><th>Start run (prepare tree)</th><td>' + h(U.clock(plan.startAt, now)) + '</td></tr>');
+    rows.push('<tr><th>Start investing</th><td>' + h(U.clock(plan.investAt, now)) + '</td></tr>');
+    if (plan.kilnStartAt != null) rows.push('<tr><th>Flask into kiln · start programme</th><td>' + h(U.clock(plan.kilnStartAt, now)) + '</td></tr>');
+    if (plan.soakStartAt != null) rows.push('<tr><th>Reach casting temp · start soak</th><td>' + h(U.clock(plan.soakStartAt, now)) + ' <em>est.</em></td></tr>');
+    if (plan.metalStartAt != null) rows.push('<tr><th>Start ' + h(run.profile.materials.metal) + ' furnace</th><td>' + h(U.clock(plan.metalStartAt, now)) + ' <em>est.</em></td></tr>');
+    if (plan.flaskReadyAt != null) rows.push('<tr><th>Flask ready · cast</th><td><strong>' + h(U.clock(plan.flaskReadyAt, now)) + '</strong></td></tr>');
+    return '<table class="plan"><tbody>' + rows.join('') + '</tbody></table><p class="hint">The 750 → casting-temperature cool-down depends on your kiln; its time is an estimate. The full schedule is on the Timeline tab.</p>';
   }
 
   CPT.UI = CPT.UI || {};

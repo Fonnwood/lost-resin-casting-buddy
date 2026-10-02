@@ -287,6 +287,66 @@ test('plan from casting time works backwards', () => {
   assert.equal(tooSoon.tooLate, true);
 });
 
+test('plan around any milestone: bench rest starting at a chosen time', () => {
+  const p = P.builtIn(FAST);
+  const at = T0 + 7 * 60 * MIN + 45 * MIN; // 15:45 if T0 is 08:00
+  const plan = E.planAround(p, {}, { stageId: 'set', edge: 'start', at }, T0);
+  assert.equal(plan.tooLate, false);
+  const set = plan.rows.find((r) => r.stage.id === 'set');
+  assert.equal(set.start, at);
+  assert.equal(set.end, at + 90 * MIN);
+  // A longer rest pushes everything after it later, and leaves what is before it alone.
+  p.stages.find((s) => s.id === 'set').minutes = 150;
+  const longer = E.planAround(p, {}, { stageId: 'set', edge: 'start', at }, T0);
+  assert.equal(longer.startAt, plan.startAt);
+  assert.equal(longer.kilnStartAt, plan.kilnStartAt + 60 * MIN);
+  assert.equal(longer.flaskReadyAt, plan.flaskReadyAt + 60 * MIN);
+});
+
+test('plan can anchor on the end of a stage', () => {
+  const p = P.builtIn(FAST);
+  const back = T0 + 10 * 60 * MIN;
+  const plan = E.planAround(p, {}, { stageId: 'set', edge: 'end', at: back }, T0);
+  const set = plan.rows.find((r) => r.stage.id === 'set');
+  assert.equal(set.end, back);
+  assert.equal(set.start, back - 90 * MIN);
+});
+
+test('plan around a milestone is too soon when earlier than the run could get there', () => {
+  const p = P.builtIn(FAST);
+  const early = E.planAround(p, {}, { stageId: 'set', edge: 'start', at: T0 + MIN }, T0);
+  assert.equal(early.tooLate, true);
+  assert.ok(early.earliest > T0 + MIN); // tree prep + investing come first
+  const onTheEarliest = E.planAround(p, {}, { stageId: 'set', edge: 'start', at: early.earliest }, T0);
+  assert.equal(onTheEarliest.tooLate, false);
+  assert.equal(onTheEarliest.startAt, T0);
+});
+
+test('legacy castAt plans still anchor on ready-to-cast; unknown stages fall back', () => {
+  const p = P.builtIn(INITIAL);
+  const castAt = T0 + 24 * 60 * MIN;
+  const legacy = E.planOf(p, { castAt });
+  assert.equal(p.stages[legacy.index].role, 'cast_prep');
+  assert.equal(legacy.at, castAt);
+  assert.equal(E.planOf(p, null), null);
+  assert.equal(E.planOf(p, { stageId: 'set', edge: 'start' }), null); // no time yet
+  assert.equal(p.stages[E.planOf(p, { at: castAt }).index].role, 'set'); // time but no stage chosen: the rest
+  const run = E.newRun(p, T0);
+  run.plan = { castAt };
+  const sched = E.schedule(run, T0);
+  assert.equal(sched.rows[E.planAnchorIndex(p)].start, castAt);
+});
+
+test('a run plan shifts the draft schedule only', () => {
+  const p = P.builtIn(FAST);
+  const run = E.newRun(p, T0);
+  const at = T0 + 300 * MIN;
+  run.plan = { stageId: 'set', edge: 'start', at };
+  assert.equal(E.schedule(run, T0).rows[idx(run, 'set')].start, at);
+  E.startRun(run, T0);
+  assert.notEqual(E.schedule(run, T0).rows[idx(run, 'set')].start, at);
+});
+
 test('editing a manufacturer value flips provenance to working and back', () => {
   const p = P.builtIn(INITIAL);
   const hold = p.stages.find((s) => s.id === 'burnout_hold_1');
