@@ -55,7 +55,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 17px/1.45 var(--sans);
+  font: 1.0625rem/1.45 var(--sans);
   padding-bottom: calc(84px + env(safe-area-inset-bottom));
   overflow-x: hidden;
 }

@@ -58,7 +58,7 @@
         await reg.showNotification(title, opts);
         return true;
       }
-      new Notification(title, opts); // eslint-disable-line no-new
+      new Notification(title, opts);
       return true;
     } catch (e) {
       return false;
@@ -71,7 +71,7 @@
     if (!a.enabled || a.prefs[alert.pref] === false) return false;
     if (a.sound) beep();
     if (a.vibrate) vibrate();
-    notify(alert.title, alert.body, alert.key);
+    notify(CPT.util.localiseTemps(alert.title), CPT.util.localiseTemps(alert.body), alert.key);
     return true;
   }
 

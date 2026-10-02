@@ -1,21 +1,13 @@
-# Security Policy
+# Security policy
 
-## Supported Versions
+Casting Buddy is a static, client-side app: it has no server component and stores everything in the browser on the device that runs it.
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+## Reporting a vulnerability
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+Please report security problems privately through GitHub's **Security → Report a vulnerability** form on this repository rather than a public issue. Include steps to reproduce and the browser/version you used. You'll get an acknowledgement within a week.
 
-## Reporting a Vulnerability
+Things that count: script injection from imported files (profiles, runs, backups), anything that lets a hosted copy leak data between users, or a service-worker caching problem that serves stale or attacker-controlled code.
 
-Use this section to tell people how to report a vulnerability.
+## Not a safety system
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+This app is a timing aid. It does not control or monitor any equipment, and a bug in it must never be the only thing standing between you and a hazard. See the safety section of the [README](README.md).

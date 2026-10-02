@@ -1,0 +1,26 @@
+# Optional: publish the app to GitHub Pages. Enable it in Settings → Pages →
+# Source: "GitHub Actions", then run this workflow from the Actions tab (or
+# change the trigger below to `push: { branches: [main] }` to deploy on every push).
+name: Deploy to GitHub Pages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency: { group: pages, cancel-in-progress: true }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: "${{ steps.deployment.outputs.page_url }}" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble site
+        run: |
+          mkdir _site
+          cp -r index.html config.js sw.js manifest.webmanifest js css icons profiles _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to see?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Is this something a profile could do instead?
+      description: Different materials, kilns or processes are usually best handled as a profile (see docs/PROFILES.md).
+      options: [Not sure, Yes - I'll try a profile, No - needs app changes]

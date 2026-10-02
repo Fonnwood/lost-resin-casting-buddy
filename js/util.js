@@ -41,11 +41,71 @@
 
   function startOfDay(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
 
-  /** "14:30", "tomorrow 02:30", "Tue 09:00" relative to now. */
+  // ------------------------------------------------------------ formatting
+  // Process data is always stored in °C and 24-hour time. These helpers only
+  // change how values are *shown*, per the user's settings.
+
+  const format = { tempUnit: 'C', clock24h: true };
+
+  /** Apply display preferences ({ tempUnit: 'C' | 'F', clock24h: boolean }). */
+  function setFormat(f) {
+    format.tempUnit = f && f.tempUnit === 'F' ? 'F' : 'C';
+    format.clock24h = !f || f.clock24h !== false;
+  }
+
+  function tempUnit() { return '°' + format.tempUnit; }
+
+  function round(n, dp) { const f = Math.pow(10, dp || 0); return Math.round(n * f) / f; }
+
+  /** °C → the number to show in the user's unit. */
+  function toDisplayTemp(c) {
+    if (c == null || c === '' || isNaN(c)) return c;
+    return round(format.tempUnit === 'F' ? Number(c) * 9 / 5 + 32 : Number(c), 1);
+  }
+
+  /** The user's unit → °C for storage. */
+  function fromDisplayTemp(x) {
+    if (x == null || x === '' || isNaN(x)) return x;
+    return round(format.tempUnit === 'F' ? (Number(x) - 32) * 5 / 9 : Number(x), 2);
+  }
+
+  /** "428°F" / "220°C" */
+  function temp(c) { return c == null || c === '' ? '—' : toDisplayTemp(c) + tempUnit(); }
+
+  /**
+   * Convert temperatures written as "220°C" (and rates like "13°C/hour") inside
+   * free text to the user's unit. Profile wording is plain text that authors
+   * write in °C; this keeps it right for everyone.
+   */
+  function localiseTemps(s) {
+    if (format.tempUnit === 'C' || typeof s !== 'string' || s.indexOf('°C') < 0) return s;
+    return s
+      .replace(/(-?\d+(?:\.\d+)?)\s?°C\/(hour|h|min)\b/g, (m, n, u) => round(Number(n) * 9 / 5, 1) + '°F/' + u)
+      .replace(/(-?\d+(?:\.\d+)?)\s?°C(?![A-Za-z/])/g, (m, n) => toDisplayTemp(Number(n)) + '°F')
+      .replace(/°C/g, '°F');
+  }
+
+  /** localiseTemps for an HTML string: text only — never attributes, textareas or scripts. */
+  function localiseHtml(html) {
+    if (format.tempUnit === 'C' || typeof html !== 'string') return html;
+    let skip = false;
+    return html.split(/(<[^>]*>)/).map((part) => {
+      if (part.charAt(0) === '<') {
+        const m = /^<(\/?)(textarea|script|style)\b/i.exec(part);
+        if (m) skip = !m[1];
+        return part;
+      }
+      return skip ? part : localiseTemps(part);
+    }).join('');
+  }
+
+  /** "14:30", "tomorrow 02:30", "Tue 09:00" relative to now (or 12-hour "2:30 PM"). */
   function clock(t, now) {
     if (t == null || isNaN(t)) return '—';
     const d = new Date(t);
-    const hhmm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    const hhmm = format.clock24h
+      ? pad(d.getHours()) + ':' + pad(d.getMinutes())
+      : ((d.getHours() % 12) || 12) + ':' + pad(d.getMinutes()) + ' ' + (d.getHours() < 12 ? 'AM' : 'PM');
     const days = Math.round((startOfDay(t) - startOfDay(now == null ? Date.now() : now)) / 86400000);
     if (days === 0) return hhmm;
     if (days === 1) return 'tomorrow ' + hhmm;
@@ -99,7 +159,5 @@
     return isFinite(n) ? n : fallback;
   }
 
-  function round(n, dp) { const f = Math.pow(10, dp || 0); return Math.round(n * f) / f; }
-
-  CPT.util = { MIN, pad, hms, shortTimer, dur, durCompact, clock, dateLabel, isoDate, toLocalInput, uid, clone, getPath, setPath, esc, num, round };
+  CPT.util = { MIN, pad, hms, shortTimer, dur, durCompact, clock, dateLabel, isoDate, toLocalInput, uid, clone, getPath, setPath, esc, num, round, format, setFormat, tempUnit, toDisplayTemp, fromDisplayTemp, temp, localiseTemps, localiseHtml };
 })(globalThis.CPT = globalThis.CPT || {});

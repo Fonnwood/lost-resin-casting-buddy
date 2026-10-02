@@ -5,10 +5,13 @@ const assert = require('node:assert/strict');
 
 require('../js/util.js');
 require('../js/profile.js');
+require('../profiles/protocast-trueblue-cz121.js');
 require('../js/engine.js');
 
 const { Engine: E, Profile: P, util: U } = globalThis.CPT;
 const MIN = 60000;
+const INITIAL = 'protocast-trueblue-cz121-initial';
+const FAST = 'protocast-trueblue-cz121-fast5h';
 const T0 = Date.UTC(2026, 8, 27, 8, 0, 0);
 
 function idx(run, id) { return run.profile.stages.findIndex((s) => s.id === id); }
@@ -25,13 +28,13 @@ function advanceTo(run, id, t) {
 }
 
 function started() {
-  const run = E.newRun(P.defaultProfile(), T0);
+  const run = E.newRun(P.builtIn(INITIAL), T0);
   E.startRun(run, T0);
   return run;
 }
 
 test('default profile carries the spec values (nothing hard-coded in engine)', () => {
-  const p = P.defaultProfile();
+  const p = P.builtIn(INITIAL);
   const s = P.summary(p);
   assert.equal(s.flaskCastingTempC, 525);
   assert.equal(s.metalPourTempC, 975);
@@ -48,16 +51,16 @@ test('default profile carries the spec values (nothing hard-coded in engine)', (
 });
 
 test('water is calculated from powder and ratio', () => {
-  const p = P.defaultProfile();
+  const p = P.builtIn(INITIAL);
   assert.equal(E.waterMl(p), 260);
   p.params.powderG.value = 800;
   assert.equal(E.waterMl(p), 320);
-  const c = E.calculator(P.defaultProfile(), 0);
+  const c = E.calculator(P.builtIn(INITIAL), 0);
   assert.equal(c.flaskVolumeCm3, 463);
 });
 
 test('ramp start temperatures and hold targets are derived', () => {
-  const p = P.defaultProfile();
+  const p = P.builtIn(INITIAL);
   const i = p.stages.findIndex((s) => s.id === 'burnout_ramp_2');
   assert.equal(P.startTempOf(p, i), 220);
   assert.equal(P.targetOf(p, i), 450);
@@ -271,7 +274,7 @@ test('alerts fire once, re-fire after an extension, and stale ones are separated
 });
 
 test('plan from casting time works backwards', () => {
-  const p = P.defaultProfile();
+  const p = P.builtIn(INITIAL);
   const castAt = Date.UTC(2026, 8, 28, 9, 0, 0);
   const plan = E.planFromCastTime(p, {}, castAt, T0);
   assert.equal(plan.tooLate, false);
@@ -285,7 +288,7 @@ test('plan from casting time works backwards', () => {
 });
 
 test('editing a manufacturer value flips provenance to working and back', () => {
-  const p = P.defaultProfile();
+  const p = P.builtIn(INITIAL);
   const hold = p.stages.find((s) => s.id === 'burnout_hold_1');
   assert.equal(hold.provenance.duration, 'manufacturer');
   assert.ok(P.editStageField(hold, 'minutes', 240));
@@ -297,7 +300,7 @@ test('editing a manufacturer value flips provenance to working and back', () => 
 });
 
 test('a run keeps its own profile snapshot', () => {
-  const profile = P.defaultProfile();
+  const profile = P.builtIn(INITIAL);
   const run = E.newRun(profile, T0);
   profile.stages[0].name = 'changed';
   assert.notEqual(run.profile.stages[0].name, 'changed');
@@ -323,7 +326,7 @@ test('import normalises partial profiles', () => {
 });
 
 test('5-hour fast profile: timings, datasheet refs and minimum warnings', () => {
-  const p = P.fastProfile();
+  const p = P.builtIn(FAST);
   const kiln = p.stages.filter((s) => s.control === 'kiln');
   assert.deepEqual(kiln.map((s) => [s.targetC, s.minutes]), [[220, 15], [220, 45], [450, 15], [450, 45], [730, 20], [730, 150]]);
   assert.equal(kiln.reduce((a, s) => a + s.minutes, 0), 290, 'burnout segments total 4 h 50 min');
@@ -333,11 +336,11 @@ test('5-hour fast profile: timings, datasheet refs and minimum warnings', () => 
   assert.equal(P.summary(p).flaskCastingTempC, 550);
   assert.equal(P.byRole(p, 'set').minutes, 90);
   assert.equal(P.byRole(p, 'soak').minutes, 60);
-  assert.notEqual(p.id, P.defaultProfile().id);
+  assert.notEqual(p.id, P.builtIn(INITIAL).id);
 });
 
 test('kiln controller programme writes holds as Cn = Cn+1', () => {
-  const k = P.kilnProgram(P.fastProfile());
+  const k = P.kilnProgram(P.builtIn(FAST));
   const v = Object.fromEntries(k.rows.map((r) => [r.code, r.value]));
   assert.deepEqual([v.C01, v.t01, v.C02, v.t02, v.C03, v.t03, v.C04, v.t04], [20, 15, 220, 45, 220, 15, 450, 45]);
   assert.deepEqual([v.C05, v.t05, v.C06, v.t06, v.C07, v.t07, v.C08], [450, 20, 730, 150, 730, 25, 550]);
@@ -349,7 +352,7 @@ test('kiln controller programme writes holds as Cn = Cn+1', () => {
 });
 
 test('a run from the fast profile schedules the burnout from the flask-in tap', () => {
-  const run = E.newRun(P.fastProfile(), T0);
+  const run = E.newRun(P.builtIn(FAST), T0);
   E.startRun(run, T0);
   advanceTo(run, 'burnout_prep', T0);
   E.completeCurrent(run, T0);
@@ -361,18 +364,18 @@ test('a run from the fast profile schedules the burnout from the flask-in tap', 
 });
 
 test('fast profile uses a 36:100 mix, marked experimental against the 38–40 datasheet range', () => {
-  const p = P.fastProfile();
+  const p = P.builtIn(FAST);
   const wr = p.params.waterRatioPct;
   assert.equal(wr.value, 36);
   assert.equal(wr.sourceType, 'experimental');
   assert.ok(P.outOfRange(wr));
   assert.equal(E.waterMl(p), 234, '650 g × 0.36');
   assert.equal(P.summary(p).waterRatioPct, 36);
-  assert.equal(P.defaultProfile().params.waterRatioPct.value, 40);
+  assert.equal(P.builtIn(INITIAL).params.waterRatioPct.value, 40);
 });
 
 test('water ratio provenance follows the datasheet range', () => {
-  const wr = P.defaultProfile().params.waterRatioPct;
+  const wr = P.builtIn(INITIAL).params.waterRatioPct;
   P.editParam(wr, 38);
   assert.equal(wr.sourceType, 'working', 'inside the vacuum-mix range');
   P.editParam(wr, 36);
