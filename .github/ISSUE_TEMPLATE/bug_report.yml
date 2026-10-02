@@ -1,0 +1,26 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead?
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes:
+      label: Browser and device
+      placeholder: Safari 18 on iPhone 15, installed to Home Screen
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: This bug could cause an unsafe instruction or a wrong time/temperature to be shown. (Please say so in the description.)

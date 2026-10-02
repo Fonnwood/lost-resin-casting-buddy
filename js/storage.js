@@ -18,7 +18,7 @@
     safetyAcknowledged: false,
   };
 
-  let memory = {};
+  const memory = {};
   let available = true;
   try {
     const k = PREFIX + '__test';
@@ -49,10 +49,7 @@
     available,
     loadProfiles() {
       const list = read(KEYS.profiles, null);
-      if (Array.isArray(list) && list.length) return list;
-      const def = [CPT.Profile.defaultProfile()];
-      write(KEYS.profiles, def);
-      return def;
+      return Array.isArray(list) ? list : [];
     },
     saveProfiles(list) { return write(KEYS.profiles, list); },
     loadRuns() { const r = read(KEYS.runs, []); return Array.isArray(r) ? r : []; },

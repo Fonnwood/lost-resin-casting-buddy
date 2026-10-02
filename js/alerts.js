@@ -58,7 +58,7 @@
         await reg.showNotification(title, opts);
         return true;
       }
-      new Notification(title, opts); // eslint-disable-line no-new
+      new Notification(title, opts);
       return true;
     } catch (e) {
       return false;

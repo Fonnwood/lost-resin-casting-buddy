@@ -58,6 +58,8 @@
       if (!app.profiles.some((p) => p.id === b.id)) app.profiles.push(b);
       if (b.makeDefault && !app.settings.defaultProfileId) app.settings.defaultProfileId = b.id;
     });
+    // Never leave the app without a profile to start a run from.
+    if (!app.profiles.length) { app.profiles.push(P.blankProfile('My profile')); changed = true; }
     if (changed) {
       app.settings.seenBuiltIns = seen;
       S.saveProfiles(app.profiles);
@@ -209,7 +211,7 @@
 
   function download(name, obj) { A.download(name, JSON.stringify(obj, null, 2), 'application/json'); }
 
-  function safeName(s) { return String(s || 'run').replace(/[^\w\-]+/g, '-').replace(/-+/g, '-').slice(0, 60); }
+  function safeName(s) { return String(s || 'run').replace(/[^\w-]+/g, '-').replace(/-+/g, '-').slice(0, 60); }
 
   function newProfileFrom(src, name) {
     const p = U.clone(src);
@@ -220,7 +222,7 @@
   }
 
   function importData(obj) {
-    let msg = [];
+    const msg = [];
     const mergeRuns = (runs) => {
       let n = 0;
       runs.forEach((r) => {
@@ -464,7 +466,7 @@
     profileEdit: (arg) => { app.editProfileId = arg; window.scrollTo(0, 0); render(true); },
     profileClose: () => { app.editProfileId = null; render(true); },
     profileDup: (arg) => { const src = app.profiles.find((p) => p.id === arg); app.profiles.push(newProfileFrom(src, src.name + ' (copy)')); saveProfiles(); render(true); },
-    profileNew: () => { app.profiles.push(newProfileFrom(P.defaultProfile(), 'New profile ' + (app.profiles.length + 1))); saveProfiles(); render(true); },
+    profileNew: () => { const p = P.blankProfile('New profile ' + (app.profiles.length + 1)); app.profiles.push(p); app.editProfileId = p.id; saveProfiles(); render(true); },
     profileDefault: (arg) => { app.settings.defaultProfileId = arg; saveSettings(); render(true); },
     profileExport: (arg) => { const p = app.profiles.find((x) => x.id === arg); download('casting-profile-' + safeName(p.name) + '.json', { type: 'casting-profile', version: CPT.VERSION, profile: p }); },
     profileDelete: (arg) => openModal({ type: 'confirm', title: 'Delete profile?', text: 'Runs already made from it keep their own copy.', yes: 'Delete', onYes: () => { app.profiles = app.profiles.filter((p) => p.id !== arg); if (app.settings.defaultProfileId === arg) app.settings.defaultProfileId = null; saveProfiles(); saveSettings(); render(true); } }),
@@ -513,7 +515,9 @@
     const path = spec.slice(bar + 1);
     const target = scopeTarget(scope);
     if (!target) return false;
-    const value = readValue(el);
+    let value = readValue(el);
+    // Phase ids are used as object keys and in bindings: keep them simple.
+    if (/(^|\.)phase$/.test(path)) value = String(value).toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'phase';
     const now = Date.now();
 
     if (path.startsWith('coolMode:')) {
