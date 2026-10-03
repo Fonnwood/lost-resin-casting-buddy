@@ -491,3 +491,29 @@ test('skip gets past the flask soak and the cooling stage without the gates', ()
   assert.ok(E.skipCurrent(run, T0 + 3 * MIN));
   assert.equal(cur(run).id, 'finish');
 });
+
+test('metal calculator: slicer ml, density ratio and allowance', () => {
+  const m = E.metalCalc({ resinAmount: 10, resinUnit: 'ml', allowancePct: 0 });
+  assert.equal(m.patternMl, 10);
+  assert.equal(m.netG, 84.5); // 10 ml x 8.45 g/cm3 brass C121
+  assert.equal(m.recommendedG, 85);
+  const withAllowance = E.metalCalc({ resinAmount: 10, allowancePct: 15 });
+  assert.equal(withAllowance.totalG, 97.2);
+  assert.equal(withAllowance.recommendedG, 98);
+});
+
+test('metal calculator: weighed resin plus wax, other alloys', () => {
+  const m = E.metalCalc({ metal: 'sterling', resinUnit: 'g', resinAmount: 11, resinDensity: 1.1, waxG: 9.5, waxDensity: 0.95, allowancePct: 0 });
+  assert.equal(m.patternMl, 20); // 10 ml resin + 10 ml wax
+  assert.equal(m.netG, 207.2);
+  assert.equal(E.metalCalc({ metal: 'custom', customDensity: 5, resinAmount: 4, allowancePct: 0 }).netG, 20);
+});
+
+test('metal calculator: blank, junk and unknown input is safe', () => {
+  const m = E.metalCalc(null);
+  assert.equal(m.recommendedG, 0);
+  assert.equal(m.metal, 'brass_c121');
+  const j = E.metalCalc({ metal: 'nope', resinAmount: 'abc', resinUnit: 'g', resinDensity: 0 });
+  assert.equal(j.recommendedG, 0);
+  assert.ok(j.others.length > 5);
+});
