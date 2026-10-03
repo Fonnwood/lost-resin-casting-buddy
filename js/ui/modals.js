@@ -26,9 +26,10 @@
       }
       case 'extend': {
         const s = run && run.profile.stages[E.currentIndex(run)];
-        body = '<h2>Adjust “' + h(s ? s.name : '') + '”</h2>' + field('Add minutes (negative to shorten)', '<input type="number" inputmode="numeric" id="ext-min" value="10" step="1">') +
+        body = '<h2>Adjust “' + h(s ? s.name : '') + '”</h2>' + field('Minutes', '<input type="number" inputmode="numeric" min="1" id="ext-min" value="10" step="1">') +
           (s && s.control === 'kiln' ? '<p class="hint">Change the kiln controller as well — the app can’t.</p>' : '') +
-          '<div class="row2">' + btn('applyExtend', 'Apply', 'primary xl') + btn('closeModal', 'Cancel', 'ghost') + '</div>';
+          '<div class="row2">' + btn('applyExtend', '+ Add time', 'primary xl', 1) + btn('applyExtend', '− Shorten', 'secondary xl', -1) + '</div>' +
+          btn('closeModal', 'Cancel', 'ghost');
         break;
       }
       case 'kilnSync': {
