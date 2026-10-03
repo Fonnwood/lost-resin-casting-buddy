@@ -491,6 +491,40 @@
     };
   }
 
+  /**
+   * The metal melt as a lane running alongside the stages: when to start the
+   * furnace and when the metal should be at pour temperature. Each item is
+   * `{ key: 'start'|'ready', at, status: done|active|pending, estimate, late, afterIndex }`
+   * where `afterIndex` is the stage row it follows chronologically (-1 = before
+   * the first). Empty when there is no soak to time the melt against, or the
+   * run ended without the melt being tracked.
+   */
+  function metalTrack(run, sched, now) {
+    const m = metalInfo(run, sched, now);
+    if (m.status === 'idle' && (m.recommendedStart == null || m.poured || run.status === 'complete' || run.status === 'abandoned')) return [];
+    const live = run.status === 'active';
+    const heat = m.heatMinutes * MIN;
+    const items = [];
+    if (m.status === 'idle') {
+      const late = live && now > m.recommendedStart ? now - m.recommendedStart : 0;
+      items.push({ key: 'start', at: m.recommendedStart, status: 'pending', estimate: m.estimated, late });
+      // Started late, the metal is ready later than planned.
+      items.push({ key: 'ready', at: late ? now + heat : m.targetReadyAt, status: 'pending', estimate: true, late: 0 });
+    } else {
+      items.push({ key: 'start', at: m.startedAt, status: 'done', estimate: false, late: 0 });
+      if (m.status === 'heating') items.push({ key: 'ready', at: m.expectedReadyAt, status: 'active', estimate: true, late: 0 });
+      else items.push({ key: 'ready', at: m.readyAt, status: 'done', estimate: false, late: 0 });
+    }
+    // Clocks show minutes, so a moment within a minute of a stage boundary
+    // belongs with the stage that is ending (metal ready ≈ soak complete).
+    items.forEach((it) => {
+      let after = -1;
+      sched.rows.forEach((row, i) => { if (row.start < it.at - MIN) after = i; });
+      it.afterIndex = after;
+    });
+    return items;
+  }
+
   /** Spec §49 run states. */
   function runState(run, sched, now) {
     if (run.status === 'draft') return 'DRAFT';
@@ -840,7 +874,7 @@
     hasTimer, minutesOf, newRun, runtime, plannedEnd, currentIndex, schedule, castIndex, planAnchorIndex, defaultPlanIndex, planOf, indexOfRole,
     startRun, completeCurrent, restartCurrent, skipCurrent, backOne, extend, pause, resume, kilnSync, advance, metalStart, metalReady, metalReset,
     confirmFlask, mark, logEdit, completeRun, abandonRun, undoable, undo, refreshStatus,
-    flaskInfo, metalInfo, runState, stageEvents, alertCandidates, dueAlerts, markAlerts, attention, stageEndText,
+    flaskInfo, metalInfo, metalTrack, runState, stageEvents, alertCandidates, dueAlerts, markAlerts, attention, stageEndText,
     planAround, planFromCastTime, waterMl, calculator, METALS, METAL_CALC_DEFAULTS, metalCalc, deviations, record, calendar,
   };
 })(globalThis.CPT = globalThis.CPT || {});

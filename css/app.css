@@ -258,6 +258,13 @@ details summary { cursor: pointer; min-height: 44px; display: flex; align-items:
 .tl-row.active .tl-name { font-size: 1.15rem; }
 .tl-row.active .tl-times { color: var(--text); }
 .tl-row.active .tl-icon { color: var(--accent); }
+/* metal melt: a side lane next to the stage it runs alongside */
+.tl-row.metal { margin-left: 26px; border-left: 4px solid var(--hot); border-radius: 0 10px 10px 0; }
+.tl-row.metal .tl-icon { flex-basis: 22px; color: var(--hot); }
+.tl-row.metal.pending { background: transparent; }
+.tl-row.metal.active { background: var(--card-2); outline: 3px solid var(--hot); outline-offset: -3px; }
+.tl-row.metal.late { background: var(--card-2); border-left-color: var(--warn); }
+.tag.metal { color: var(--hot); }
 .dev { color: var(--warn); font-weight: 700; }
 .over { color: var(--warn); }
 

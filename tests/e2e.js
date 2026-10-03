@@ -90,6 +90,9 @@ const MIN = 60000;
 
   await page.getByRole('button', { name: 'TIMELINE', exact: true }).click();
   await expectText('Resin burnout');
+  // The metal melt runs alongside the burnout as its own lane.
+  await expectText('CZ121 brass ready to pour');
+  if (await page.locator('.tl-row.metal').count() !== 2) throw new Error('Expected furnace start and metal ready on the timeline');
   await shot('timeline');
   await page.getByRole('button', { name: 'NOW', exact: true }).click();
 
@@ -106,6 +109,11 @@ const MIN = 60000;
   await tap('START METAL MELT');
   await advance(30 * MIN);
   await shot('now-soak-heating');
+  await page.getByRole('button', { name: 'TIMELINE', exact: true }).click();
+  await expectText('CZ121 brass furnace started');
+  await expectText('to expected readiness');
+  await shot('timeline-metal-heating');
+  await page.getByRole('button', { name: 'NOW', exact: true }).click();
   await advance(31 * MIN);
   await expectText('FLASK READY');
   await tap('CZ121 BRASS AT POUR TEMPERATURE');

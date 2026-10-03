@@ -5,7 +5,7 @@ A mobile-first **process companion and timing dashboard** for vacuum-assisted in
 At any moment it answers: **Where am I? What should I be doing now? What happens next, and when?**
 
 - **NOW** — one big current step: what to do, target temperature, countdown, extend buttons, the next step, and a parallel **flask vs. metal** panel that tells you when to start the furnace.
-- **TIMELINE** — the whole process with actual and projected clock times, and export of every upcoming intervention as **calendar alarms (.ics)** for overnight burnouts.
+- **TIMELINE** — the whole process with actual and projected clock times, the metal melt running alongside the burnout (when to start the furnace, when the metal should be ready), and export of every upcoming intervention as **calendar alarms (.ics)** for overnight burnouts.
 - **RUN** — values for this casting, an investment calculator, a **metal weight calculator**, and **plan backwards from a casting time**.
 - **HISTORY** — finished runs with ratings, defects, notes, planned-vs-actual timelines, comparison, JSON export/import.
 - **Settings** — alerts (each individually), °C/°F, theme, accent, text size, custom CSS, a full **profile editor**, backup/restore.
