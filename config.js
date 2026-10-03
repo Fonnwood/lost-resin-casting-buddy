@@ -16,6 +16,9 @@ CPT.config = {
   /** Character shown beside the name in the header (any text or emoji). */
   logo: '▲',
 
+  /** Where the source code lives, linked from the app ("open source" notes). '' hides the link. */
+  sourceUrl: 'https://github.com/fonnwood/lost-resin-casting-buddy',
+
   /** Starting values for the Settings screen (see js/storage.js DEFAULT_SETTINGS). */
   defaultSettings: {
     // theme: 'dark',            // 'dark' | 'light' | 'auto'

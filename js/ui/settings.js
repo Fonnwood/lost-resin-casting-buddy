@@ -7,7 +7,7 @@
   const P = CPT.Profile;
   const E = CPT.Engine;
   const h = U.esc;
-  const { ctx, btn, refLine, field, numInput, toggle, select, provSelect, safetyCard, defaultProfileOf } = CPT.UI.lib;
+  const { ctx, btn, openSourceNote, refLine, field, numInput, toggle, select, provSelect, safetyCard, defaultProfileOf } = CPT.UI.lib;
 
   function renderSettings(app, now) {
     const c = ctx();
@@ -57,7 +57,8 @@
       '<div class="row2">' + btn('exportAll', 'Export full backup', 'ghost') + '<label class="btn ghost file">Restore backup<input type="file" accept="application/json,.json" data-action-change="importFile" hidden></label></div></section>';
 
     html += safetyCard(defaultProfileOf(app), false);
-    html += '<section class="card"><h2>About</h2><p>Lost Resin Casting Buddy v' + h(CPT.VERSION) + '. A process companion and timing dashboard — not a kiln controller.</p></section>';
+    html += '<section class="card"><h2>About</h2><p>Lost Resin Casting Buddy v' + h(CPT.VERSION) + '. A process companion and timing dashboard — not a kiln controller.</p>' +
+      openSourceNote('') + '<p class="hint">Bug reports, ideas and profiles for other materials are welcome there.</p></section>';
     return { html, live: c.live };
   }
 

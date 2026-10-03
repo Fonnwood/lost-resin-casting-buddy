@@ -28,6 +28,13 @@
     return '<span class="prov prov-' + h(type) + '" title="' + h(P.SOURCE_TYPES[type] || type) + '">' + (PROV_ICON[type] || '') + ' ' + h((what ? what + ': ' : '') + (P.SOURCE_TYPES[type] || type)) + '</span>';
   }
 
+  /** "Free and open source" note with a link to the code (config.sourceUrl). */
+  function openSourceNote(cls) {
+    const url = (CPT.config && CPT.config.sourceUrl) || '';
+    const link = /^https?:\/\//.test(url) ? ' <a href="' + h(url) + '" target="_blank" rel="noopener">' + (/github\.com/.test(url) ? 'Source code on GitHub' : 'Source code') + '</a>' : '';
+    return '<p class="' + (cls || 'hint') + '">Free and open source (MIT licence).' + link + '</p>';
+  }
+
   function btn(action, label, cls, arg, attrs) {
     return '<button type="button" class="btn ' + (cls || '') + '" data-action="' + h(action) + '"' + (arg != null ? ' data-arg="' + h(arg) + '"' : '') + (attrs || '') + '>' + label + '</button>';
   }
@@ -304,5 +311,5 @@
   }
 
   CPT.UI = CPT.UI || {};
-  CPT.UI.lib = { ctx, prov, btn, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, field, numInput, paramField, toggle, select, provSelect, kv, safetyCard, defaultProfileOf, resultForm, planBlock };
+  CPT.UI.lib = { ctx, prov, btn, openSourceNote, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, field, numInput, paramField, toggle, select, provSelect, kv, safetyCard, defaultProfileOf, resultForm, planBlock };
 })(globalThis.CPT = globalThis.CPT || {});

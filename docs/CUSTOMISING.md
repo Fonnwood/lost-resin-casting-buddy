@@ -13,6 +13,7 @@ For a copy you run or host for others:
 | Key | Effect |
 |---|---|
 | `appName`, `logo` | Header, page title, home-screen name. |
+| `sourceUrl` | The "open source" link in the app (Settings → About and the home screen). `''` hides it. |
 | `defaultSettings` | Starting values for anyone who hasn't chosen their own (e.g. `{ tempUnit: 'F' }`). |
 | `profiles` | Extra profiles shown to everyone. |
 | `hideBuiltInProfiles` | Don't ship the Protocast examples. |

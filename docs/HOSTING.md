@@ -1,6 +1,6 @@
 # Hosting with accounts (Vercel)
 
-Casting Buddy is local-first: it works with no server at all, and every static host still works exactly as before. A copy hosted on Vercel can also offer **optional accounts**, so people can keep their runs, profiles and settings in one place and use them on several devices.
+Casting Buddy is local-first: it works with no server at all, and every static host still works exactly as before. A copy hosted on Vercel can also offer **optional accounts**, so people can keep their runs, profiles and settings in one place and use them on several devices. This is how [castingbuddyapp.com](https://castingbuddyapp.com) runs.
 
 ## What users get
 
@@ -58,5 +58,6 @@ Each address can request at most one code per 30 seconds, 5 per hour and 20 per 
 - `npm run dev` runs the app and API locally with an in-memory database. Sign-in codes are printed in the terminal instead of emailed.
 - `DATABASE_URL=postgres://… RESEND_API_KEY=… EMAIL_FROM=… npm start` runs the real thing on any Node 20+ server with any Postgres 13+ (after `npm install`).
 - The Docker image and GitHub Pages workflow stay static, without accounts. Set `accounts: false` in `config.js` to hide sign-in on any other host.
+- If you run your own copy for other people, point `sourceUrl` in `config.js` at your code, and tell your users what you store (the README's *Privacy* section is a starting point).
 
 API reference: the endpoint files in [`api/`](../api) each start with a short description. Tests: `npm test` covers the API (and runs it against real Postgres too when `TEST_DATABASE_URL` is set) and sync between simulated devices. `tests/e2e-sync.js` signs in two phones in a browser.

@@ -8,7 +8,7 @@
   const E = CPT.Engine;
   const h = U.esc;
   const MIN = U.MIN;
-  const { ctx, prov, btn, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, safetyCard, defaultProfileOf, resultForm } = CPT.UI.lib;
+  const { ctx, prov, btn, openSourceNote, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, safetyCard, defaultProfileOf, resultForm } = CPT.UI.lib;
 
   function renderNow(app, now) {
     const c = ctx();
@@ -71,6 +71,7 @@
       html += '<section class="card"><div class="eyebrow">RECENT RUNS</div>' + recent.map((r) => '<button type="button" class="listrow" data-action="historyOpen" data-arg="' + h(r.id) + '"><span>' + h(r.name) + '</span><span class="muted">' + (r.result && r.result.rating ? '★ ' + r.result.rating + '/5' : '') + '</span></button>').join('') + '</section>';
     }
     html += safetyCard(defaultProfileOf(app), true);
+    html += openSourceNote('hint center');
     return html;
   }
 
