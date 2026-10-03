@@ -7,7 +7,7 @@
   const P = CPT.Profile;
   const E = CPT.Engine;
   const h = U.esc;
-  const { ctx, btn, openSourceNote, refLine, field, numInput, toggle, select, provSelect, safetyCard, defaultProfileOf } = CPT.UI.lib;
+  const { ctx, btn, openSourceNote, privacyLink, refLine, field, numInput, toggle, select, provSelect, safetyCard, defaultProfileOf } = CPT.UI.lib;
 
   function renderSettings(app, now) {
     const c = ctx();
@@ -74,7 +74,7 @@
       return '<p>Get alerts on this device even when the app is closed or the phone is locked — so an overnight burnout can wake you.</p>' +
         (st.error ? '<p class="warnbox">' + h(st.error) + '</p>' : '') +
         btn('pushOn', st.busy ? 'Turning on…' : 'Turn on notifications', 'primary', null, st.busy ? ' disabled' : '') +
-        '<p class="hint">No account needed. ' + calendar + '</p>';
+        '<p class="hint">No account needed. ' + calendar + ' ' + privacyLink() + '</p>';
     }
     if (N && N.needsInstall() && CPT.Sync && CPT.Sync.status.pushKey) {
       return '<p class="warnbox">On iPhone and iPad, notifications need the app on your Home Screen: tap <strong>Share → Add to Home Screen</strong>, then open Casting Buddy from there and turn them on here.</p>';
@@ -93,7 +93,7 @@
     let html = '<section class="card" id="account"><h2>Account & sync</h2>';
     if (!st.email) {
       html += '<p>Optional. Sign in with your email to keep your runs, profiles and settings in your account and pick them up on any device. Without an account everything stays on this device, as before.</p>' +
-        '<p class="hint">No password: we email you a code. We store only your email address and your casting data — no name, no tracking.</p>' +
+        '<p class="hint">No password: we email you a code. We store only your email address and your casting data — no name, no tracking. ' + privacyLink() + '</p>' +
         (st.error ? '<p class="warnbox">' + h(st.error) + '</p>' : '') +
         btn('signIn', 'Sign in with email', 'primary');
       return html + '</section>';

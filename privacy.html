@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy policy · Casting Buddy</title>
+  <meta name="description" content="How Casting Buddy (castingbuddyapp.com) handles your data.">
+  <meta name="author" content="Fonnwood (https://fonnwood.com)">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body { padding-bottom: 32px; }
+    .doc h1 { font-size: 1.6rem; margin: 8px 0 4px; }
+    .doc h2 { font-size: 1.15rem; margin: 0 0 8px; }
+    .doc p, .doc li { line-height: 1.55; }
+    .doc ul { padding-left: 1.2em; margin: 6px 0; }
+    .doc table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    .doc th, .doc td { text-align: left; vertical-align: top; padding: 8px 6px; border-top: 1px solid var(--line, rgba(127,127,127,.25)); }
+    .doc th { font-weight: 600; }
+    .doc .back { display: inline-block; margin: 4px 0 12px; }
+  </style>
+</head>
+<body>
+  <main class="doc">
+    <a class="back" href="./">← Back to Casting Buddy</a>
+    <h1>Privacy policy</h1>
+    <p class="hint">Casting Buddy at castingbuddyapp.com · Last updated 3 October 2026</p>
+
+    <section class="card">
+      <h2>The short version</h2>
+      <ul>
+        <li><strong>Without an account, nothing you enter leaves your device.</strong> Your runs, profiles and settings are kept in your browser.</li>
+        <li><strong>An account is optional.</strong> If you create one, we store your <strong>email address</strong> and the <strong>casting data</strong> you sync, and nothing else: no name, no password, no payment details.</li>
+        <li><strong>Notifications are optional</strong> and need no account. If you turn them on, we store your device's push address and the times and wording of your upcoming alerts, so we can send them.</li>
+        <li>No advertising, no analytics, no tracking cookies, and we never sell or share your data for marketing.</li>
+        <li>You can download your data or delete your account at any time from Settings.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Who we are</h2>
+      <p>Casting Buddy is made and run by <a href="https://fonnwood.com">Fonnwood</a>, based in the United Kingdom. Fonnwood is the <em>data controller</em> for the personal data described here, under the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. If you are in the European Union, the EU GDPR gives you the same rights described below.</p>
+      <p>Questions or requests about your data: <a href="mailto:privacy@castingbuddyapp.com">privacy@castingbuddyapp.com</a>.</p>
+      <p>Casting Buddy is open source. You can read exactly what the app and server do on <a href="https://github.com/fonnwood/lost-resin-casting-buddy">GitHub</a>.</p>
+    </section>
+
+    <section class="card">
+      <h2>What we collect, why, and our lawful basis</h2>
+      <table>
+        <tr><th>Data</th><th>Why</th><th>Lawful basis</th></tr>
+        <tr><td><strong>Your email address</strong> (only if you create an account)</td><td>To send you sign-in codes and to identify your account.</td><td>Contract: it is needed to provide the account you ask for.</td></tr>
+        <tr><td><strong>Your casting data</strong> (runs, notes, ratings, process profiles, app settings), if you are signed in</td><td>To keep it in your account and sync it between your devices.</td><td>Contract.</td></tr>
+        <tr><td><strong>Sign-in records</strong>: one-way hashes of sign-in codes and session tokens, failed attempts, expiry times</td><td>To sign you in securely and stop people guessing codes.</td><td>Contract, and our legitimate interest in keeping accounts secure.</td></tr>
+        <tr><td><strong>Notification data</strong> (only if you turn notifications on): your device's push address and keys, issued by your browser's push service, and the times and wording of your upcoming alerts</td><td>To send your alerts while the app is closed or your phone is locked. This is not linked to your account or email address.</td><td>Contract: you asked for notifications.</td></tr>
+        <tr><td><strong>Technical request data</strong>: IP address, browser type, time and address of each request</td><td>Processed by our hosting provider to deliver the site, keep it secure and limit abuse (for example, too many sign-in requests). We do not store IP addresses in our own database.</td><td>Legitimate interests: running a secure service.</td></tr>
+      </table>
+      <p>We don't make automated decisions about you, and we don't build profiles of you.</p>
+    </section>
+
+    <section class="card">
+      <h2>Cookies and storage on your device</h2>
+      <ul>
+        <li><strong>One cookie, only if you sign in:</strong> <code>cb_session</code> keeps you signed in on that device for up to 30 days. It is strictly necessary for the account to work, so it doesn't need consent. Signing out removes it.</li>
+        <li><strong>Browser storage:</strong> the app keeps your runs, profiles and settings in your browser's local storage so it works offline. It stays on your device and you can clear it at any time (Settings, or your browser's settings).</li>
+        <li>No advertising or analytics cookies, and no third-party trackers.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Who processes data for us</h2>
+      <p>We use these providers to run the service. They act on our instructions under their data processing terms, and may only use the data to provide their service to us.</p>
+      <table>
+        <tr><th>Provider</th><th>What for</th><th>What they handle</th></tr>
+        <tr><td>Vercel</td><td>Website hosting and the app's server</td><td>All requests, including IP addresses in short-lived logs</td></tr>
+        <tr><td>Neon</td><td>Database</td><td>Email addresses, casting data, sign-in records, notification data</td></tr>
+        <tr><td>Resend</td><td>Sending sign-in emails</td><td>Your email address and the code email, with delivery records</td></tr>
+        <tr><td>Upstash (QStash)</td><td>Waking our server at each alert time</td><td>An anonymous device reference and alert times, not the alert content</td></tr>
+        <tr><td>Your browser's push service (e.g. Apple, Google, Mozilla)</td><td>Delivering notifications to your device</td><td>Encrypted notification messages, which they can't read</td></tr>
+      </table>
+      <p><strong>International transfers:</strong> these providers store or process data in the United States. Where a provider is certified under the UK–US data bridge (the UK Extension to the EU–US Data Privacy Framework), transfers rely on that. Otherwise they rely on the UK International Data Transfer Addendum to the EU Standard Contractual Clauses in the provider's data processing terms.</p>
+    </section>
+
+    <section class="card">
+      <h2>How long we keep it</h2>
+      <ul>
+        <li><strong>Account and casting data:</strong> until you delete your account (Settings → Account &amp; sync → Delete account). It is then removed from our database straight away, and from our database provider's automatic backups when they expire, normally within days.</li>
+        <li><strong>Sign-in codes:</strong> valid for 10 minutes, deleted within about a day.</li>
+        <li><strong>Sign-ins (sessions):</strong> expire after 30 days, or when you sign out.</li>
+        <li><strong>Notification data:</strong> deleted when you turn notifications off. Otherwise it is deleted after 30 days without use, and sent alerts after 2 days.</li>
+        <li><strong>Hosting and email logs:</strong> kept by Vercel and Resend for a limited period under their own retention policies.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Your rights</h2>
+      <p>You have the right to:</p>
+      <ul>
+        <li><strong>access</strong> your data and get a copy (Settings → Data &amp; backup → Export full backup gives you all of your casting data at any time);</li>
+        <li><strong>correct</strong> it, either in the app or by asking us;</li>
+        <li><strong>delete</strong> it: Settings → Account &amp; sync → Delete account removes your email address and everything synced, or ask us;</li>
+        <li><strong>restrict</strong> or <strong>object to</strong> how we use it;</li>
+        <li><strong>data portability</strong>: the export is a standard JSON file.</li>
+      </ul>
+      <p>To exercise any of these, use the app or email <a href="mailto:privacy@castingbuddyapp.com">privacy@castingbuddyapp.com</a>. We'll reply within one month. It's free.</p>
+      <p>If you're unhappy with how we've handled your data, please tell us first. You also have the right to complain to the UK Information Commissioner's Office: <a href="https://ico.org.uk/make-a-complaint/">ico.org.uk/make-a-complaint</a>, 0303 123 1113. In the EU, you can contact your local data protection authority.</p>
+    </section>
+
+    <section class="card">
+      <h2>Security</h2>
+      <p>Everything is sent over HTTPS. Sign-in codes and session tokens are stored only as one-way hashes. The sign-in cookie can't be read by scripts. Sign-in attempts are limited, and notification messages are end-to-end encrypted to your device. No system is perfectly secure, but we'll tell you and the ICO promptly if a breach puts your data at risk, as the law requires.</p>
+    </section>
+
+    <section class="card">
+      <h2>Children</h2>
+      <p>Casting Buddy is a tool for a hazardous workshop process and is not aimed at children. Please don't create an account if you are under 13.</p>
+    </section>
+
+    <section class="card">
+      <h2>Changes to this policy</h2>
+      <p>If we change how we handle your data, we'll update this page and the date at the top, and for significant changes we'll say so in the app.</p>
+    </section>
+
+    <p class="hint center">Casting Buddy, a free, open-source app by <a href="https://fonnwood.com">Fonnwood</a>.</p>
+  </main>
+</body>
+</html>

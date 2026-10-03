@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Privacy policy (UK GDPR) at `privacy.html`, linked from the sign-in dialog, the account and notification settings, Settings → About and the home screen (`privacyUrl` in config.js).
 - Notifications that arrive while the phone sleeps or the app is closed (Web Push), for hosted copies: turn them on in Settings → Alerts. The device sends its upcoming alerts (stage ends through the kiln programme, furnace start, metal ready, soak complete) and the server sends each at its time, using Upstash QStash. They update whenever the schedule changes, need no account, and respect each alert's on/off setting. On iPhone they need the app on the Home Screen.
 - "By Fonnwood" with a link in the app, the sign-in email and the README (configurable with `by` in config.js).
 - The app now says it's free and open source, with a link to the code (Settings → About and the home screen). README rewritten around the hosted site at castingbuddyapp.com, with sections on using it, accounts and privacy.

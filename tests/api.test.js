@@ -278,5 +278,6 @@ test('the static server keeps the API and helpers private unless enabled', async
     assert.equal((await fetch(base + '/api/sync', { method: 'POST' })).status, 404);
     assert.equal((await fetch(base + '/api/_lib/config.js')).status, 404);
     assert.equal((await fetch(base + '/index.html')).status, 200);
+    assert.match(await (await fetch(base + '/privacy.html')).text(), /Privacy policy/);
   } finally { server.close(); }
 });

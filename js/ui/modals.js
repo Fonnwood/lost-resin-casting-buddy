@@ -7,13 +7,7 @@
   const P = CPT.Profile;
   const E = CPT.Engine;
   const h = U.esc;
-  const { btn, field, planBlock } = CPT.UI.lib;
-
-  /** Link to the README's privacy section, for hosts whose code is on GitHub. */
-  function privacyLink() {
-    const url = (CPT.config && CPT.config.sourceUrl) || '';
-    return /^https:\/\/github\.com\//.test(url) ? ' <a href="' + h(url.replace(/\/+$/, '') + '#privacy') + '" target="_blank" rel="noopener">Privacy details</a>' : '';
-  }
+  const { btn, field, planBlock, privacyLink } = CPT.UI.lib;
 
   function renderModal(app, now) {
     const m = app.modal;
@@ -82,7 +76,7 @@
           body = '<h2>Sign in or create an account</h2><p>Enter your email and we’ll send you a sign-in code — no password. New addresses get an account automatically.</p>' +
             field('Email', '<input type="email" id="si-email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" value="' + h(m.email || '') + '">') + err +
             '<div class="row2">' + btn('signInSend', m.busy ? 'Sending…' : 'Email me a code', 'primary xl', null, m.busy ? ' disabled' : '') + btn('closeModal', 'Cancel', 'ghost') + '</div>' +
-            '<p class="hint">You stay signed in on this device for ' + h(days) + ' days. We store only your email address and your casting data.' + privacyLink() + '</p>';
+            '<p class="hint">You stay signed in on this device for ' + h(days) + ' days. We store only your email address and your casting data. ' + privacyLink('How we handle your data') + '</p>';
         }
         break;
       }

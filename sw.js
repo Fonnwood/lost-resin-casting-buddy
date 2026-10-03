@@ -1,9 +1,9 @@
 /* Casting Buddy service worker: network-first with an offline cache, so the
  * workshop app always gets the latest deploy when online and still opens with
  * no signal. Bump CACHE when the asset list changes. /api/ is never cached. */
-const CACHE = 'casting-buddy-v4';
+const CACHE = 'casting-buddy-v5';
 const ASSETS = [
-  './', './index.html', './css/app.css', './manifest.webmanifest',
+  './', './index.html', './privacy.html', './css/app.css', './manifest.webmanifest',
   './config.js', './js/util.js', './js/profile.js', './profiles/protocast-trueblue-cz121.js', './js/engine.js', './js/storage.js', './js/sync.js', './js/push.js', './js/alerts.js', './js/ui/components.js', './js/ui/now.js', './js/ui/timeline.js', './js/ui/run.js', './js/ui/history.js', './js/ui/settings.js', './js/ui/modals.js', './js/app.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];

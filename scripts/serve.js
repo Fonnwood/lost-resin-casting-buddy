@@ -17,7 +17,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 
 /** Files the browser may fetch. Everything else in the repo (tests, docs, scripts…) stays private. */
-const PUBLIC = [/^\/$/, /^\/index\.html$/, /^\/config\.js$/, /^\/sw\.js$/, /^\/manifest\.webmanifest$/, /^\/(js|css|icons|profiles)\//, /^\/[\w.-]+\.css$/];
+const PUBLIC = [/^\/$/, /^\/index\.html$/, /^\/privacy\.html$/, /^\/config\.js$/, /^\/sw\.js$/, /^\/manifest\.webmanifest$/, /^\/(js|css|icons|profiles)\//, /^\/[\w.-]+\.css$/];
 
 /** API endpoints: /api/<name> → api/<name>.js. `_lib` holds helpers, not endpoints. */
 const API = /^\/api\/((?:[a-z-]+\/)?[a-z-]+)$/;

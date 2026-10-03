@@ -28,6 +28,12 @@
     return '<span class="prov prov-' + h(type) + '" title="' + h(P.SOURCE_TYPES[type] || type) + '">' + (PROV_ICON[type] || '') + ' ' + h((what ? what + ': ' : '') + (P.SOURCE_TYPES[type] || type)) + '</span>';
   }
 
+  /** Link to the privacy policy (config.privacyUrl), or '' if none. */
+  function privacyLink(label) {
+    const url = (CPT.config && CPT.config.privacyUrl) || '';
+    return url && !/^\s*javascript:/i.test(url) ? '<a href="' + h(url) + '" target="_blank" rel="noopener">' + h(label || 'Privacy policy') + '</a>' : '';
+  }
+
   /** A nudge to turn on push notifications, where offered and not yet on (or how to get them on iPhone). */
   function pushNudge() {
     const N = CPT.Push;
@@ -47,7 +53,8 @@
     const link = /^https?:\/\//.test(url) ? ' <a href="' + h(url) + '" target="_blank" rel="noopener">' + (/github\.com/.test(url) ? 'Source code on GitHub' : 'Source code') + '</a>' : '';
     const by = (CPT.config && CPT.config.by) || {};
     const maker = by.name ? ' by ' + (/^https?:\/\//.test(by.url || '') ? '<a href="' + h(by.url) + '" target="_blank" rel="noopener">' + h(by.name) + '</a>' : h(by.name)) : '';
-    return '<p class="' + (cls || 'hint') + '">Free and open source (MIT licence)' + maker + '.' + link + '</p>';
+    const privacy = privacyLink();
+    return '<p class="' + (cls || 'hint') + '">Free and open source (MIT licence)' + maker + '.' + link + (privacy ? ' · ' + privacy : '') + '</p>';
   }
 
   function btn(action, label, cls, arg, attrs) {
@@ -326,5 +333,5 @@
   }
 
   CPT.UI = CPT.UI || {};
-  CPT.UI.lib = { ctx, prov, btn, openSourceNote, pushNudge, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, field, numInput, paramField, toggle, select, provSelect, kv, safetyCard, defaultProfileOf, resultForm, planBlock };
+  CPT.UI.lib = { ctx, prov, btn, openSourceNote, pushNudge, privacyLink, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, field, numInput, paramField, toggle, select, provSelect, kv, safetyCard, defaultProfileOf, resultForm, planBlock };
 })(globalThis.CPT = globalThis.CPT || {});

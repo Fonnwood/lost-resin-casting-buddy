@@ -32,7 +32,7 @@ Turn them on in **Settings → Alerts → Turn on notifications** (or from the N
 
 ### Privacy
 
-Without an account, castingbuddyapp.com never sees your data. With an account, the server stores your **email address** and your **casting data** (runs, profiles, settings), and nothing else: no name, no password, no IP addresses, no analytics or tracking. Sign-in codes and session tokens are stored only as one-way hashes.
+The full policy (UK GDPR) is at [castingbuddyapp.com/privacy.html](https://castingbuddyapp.com/privacy.html). In short: without an account, castingbuddyapp.com never sees your data. With an account, the server stores your **email address** and your **casting data** (runs, profiles, settings), and nothing else: no name, no password, no IP addresses, no analytics or tracking. Sign-in codes and session tokens are stored only as one-way hashes.
 
 If you turn on notifications, the server also keeps your device's push address (issued by your browser's push service, not linked to you or to an account) and the times and wording of your upcoming alerts, so it can send them. Turning notifications off deletes these. Unused push addresses are deleted after 30 days, and sent alerts after 2 days.
 

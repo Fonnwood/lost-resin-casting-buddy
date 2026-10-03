@@ -14,6 +14,7 @@ For a copy you run or host for others:
 |---|---|
 | `appName`, `logo` | Header, page title, home-screen name. |
 | `by` | `{ name, url }` credited as "by …" beside the open-source note. `name: ''` hides it. |
+| `privacyUrl` | Your privacy policy, linked from sign-in, notifications and About. The bundled `privacy.html` is castingbuddyapp.com's own: if you host a copy for other people, replace it with yours. `''` hides the links. |
 | `sourceUrl` | The "open source" link in the app (Settings → About and the home screen). `''` hides it. |
 | `defaultSettings` | Starting values for anyone who hasn't chosen their own (e.g. `{ tempUnit: 'F' }`). |
 | `profiles` | Extra profiles shown to everyone. |

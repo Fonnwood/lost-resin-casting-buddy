@@ -19,6 +19,10 @@ CPT.config = {
   /** Who makes it, credited beside the open-source note. Set name to '' to hide. */
   by: { name: 'Fonnwood', url: 'https://fonnwood.com' },
 
+  /** Your privacy policy, linked from sign-in, notifications and About. privacy.html is
+   *  castingbuddyapp.com's — write your own if you host a copy for others. '' hides the links. */
+  privacyUrl: 'privacy.html',
+
   /** Where the source code lives, linked from the app ("open source" notes). '' hides the link. */
   sourceUrl: 'https://github.com/fonnwood/lost-resin-casting-buddy',
 
