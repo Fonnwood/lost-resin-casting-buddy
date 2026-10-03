@@ -151,6 +151,67 @@ test('brass furnace start is timed so metal is ready as the soak completes', () 
   assert.ok(due.stale.some((a) => a.key === 'metal15'), 'missed by >10 min → stale, not notified');
 });
 
+test('metal melt runs alongside the burnout on the timeline', () => {
+  const run = started();
+  run.profile.params.metalHeatMinutes.value = 90; // longer than the soak → furnace starts during the cool-down
+  let s = E.schedule(run, T0);
+  let m = E.metalInfo(run, s, T0);
+  let track = E.metalTrack(run, s, T0);
+  assert.deepEqual(track.map((it) => [it.key, it.status]), [['start', 'pending'], ['ready', 'pending']]);
+  assert.equal(track[0].at, m.recommendedStart);
+  assert.equal(track[1].at, m.targetReadyAt);
+  assert.ok(track[0].estimate, 'soak not started yet → estimated');
+  const start = s.rows[track[0].afterIndex];
+  assert.equal(start.stage.id, 'cool_to_cast', 'placed beside the stage it happens in');
+  assert.ok(start.start < track[0].at && track[0].at <= start.end);
+  assert.equal(s.rows[track[1].afterIndex].stage.id, 'soak', 'ready as the soak completes, before "Ready to cast"');
+
+  // Late: start time passed without the furnace being started → ready slips.
+  advanceTo(run, 'cool_to_cast', T0);
+  E.completeCurrent(run, T0);
+  const late = T0 + 40 * MIN;
+  s = E.schedule(run, late);
+  track = E.metalTrack(run, s, late);
+  assert.equal(track[0].late, 70 * MIN);
+  assert.equal(track[1].at, late + 90 * MIN);
+
+  // Heating, then confirmed.
+  E.metalStart(run, late);
+  s = E.schedule(run, late);
+  track = E.metalTrack(run, s, late);
+  assert.deepEqual(track.map((it) => [it.key, it.status, it.at]), [['start', 'done', late], ['ready', 'active', late + 90 * MIN]]);
+  E.metalReady(run, late + 95 * MIN);
+  s = E.schedule(run, late + 95 * MIN);
+  track = E.metalTrack(run, s, late + 95 * MIN);
+  assert.deepEqual(track.map((it) => [it.key, it.status, it.at]), [['start', 'done', late], ['ready', 'done', late + 95 * MIN]]);
+});
+
+test('metal ready a few seconds after the soak ends stays beside the soak', () => {
+  const run = started();
+  advanceTo(run, 'cool_to_cast', T0);
+  E.completeCurrent(run, T0); // soak 60 min
+  E.metalStart(run, T0 + 5000); // tapped a moment later, 60 min heat-up
+  const s = E.schedule(run, T0 + 5000);
+  const ready = E.metalTrack(run, s, T0 + 5000)[1];
+  assert.equal(s.rows[ready.afterIndex].stage.id, 'soak');
+});
+
+test('metal lane follows a draft plan and disappears if the pour happened untracked', () => {
+  const run = E.newRun(P.builtIn(INITIAL), T0);
+  const at = T0 + 6 * 60 * MIN;
+  run.plan = { stageId: 'set', edge: 'start', at };
+  const s = E.schedule(run, T0);
+  const track = E.metalTrack(run, s, T0);
+  assert.equal(track[0].at, E.metalInfo(run, s, T0).recommendedStart);
+  assert.ok(track[0].at > at, 'shifted with the plan');
+  assert.equal(track[0].late, 0, 'drafts are never late');
+
+  const cast = started();
+  advanceTo(cast, 'cast', T0);
+  E.mark(cast, 'pour_started', T0);
+  assert.deepEqual(E.metalTrack(cast, E.schedule(cast, T0), T0), []);
+});
+
 test('ready to cast needs both flask soak and a manual metal confirmation', () => {
   const run = started();
   advanceTo(run, 'cool_to_cast', T0);
