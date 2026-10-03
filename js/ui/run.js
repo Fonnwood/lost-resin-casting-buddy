@@ -50,7 +50,7 @@
       '<div class="grid2">' + paramField('run', p, 'metalWeightG') + paramField('run', p, 'metalReadyOffsetMinutes') + '</div>' +
       '</section>';
 
-    html += '<section class="card"><h2>Plan from casting time</h2>' + planBlock(run, now) + '</section>';
+    html += '<section class="card"><h2>Plan the timeline</h2>' + planBlock(run, now) + '</section>';
 
     html += '<section class="card"><h2>Temperatures & durations</h2><p class="hint">Change any value — every later clock time updates immediately. Completed stages are locked.</p>';
     let phase = null;

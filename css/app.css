@@ -359,3 +359,8 @@ th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color:
   body { font-size: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Planner */
+.plan tr.anchor th, .plan tr.anchor td { color: var(--accent); }
+.lockedplan { margin: 8px 0; }
+.btn.on { outline: 2px solid var(--accent); }

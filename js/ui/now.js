@@ -73,19 +73,23 @@
   function draftCard(app, run, now, c) {
     let html = '<div class="runbar"><div class="runname">' + h(run.name) + '</div><span class="state state-draft">DRAFT</span></div>';
     html += '<section class="card hero"><div class="eyebrow">WHAT TO DO NOW</div>';
-    if (run.plan && run.plan.castAt) {
-      const plan = E.planFromCastTime(run.profile, run.values, run.plan.castAt, now);
-      html += '<h1>Plan: cast ' + h(U.clock(plan.castAt, now)) + '</h1>';
+    const pl = E.planOf(run.profile, run.plan);
+    if (pl) {
+      const plan = E.planAround(run.profile, run.values, pl, now);
+      const a = plan.rows[pl.index];
+      const aName = a.stage.short || a.stage.name;
+      html += '<h1>' + (pl.locked ? '🔒 ' : '') + 'Plan: ' + h(aName) + ' ' + (pl.edge === 'end' ? 'ends' : 'starts') + ' ' + h(U.clock(pl.at, now)) + '</h1>';
       if (plan.tooLate) {
-        html += '<p class="warnbox">That casting time is too soon. Earliest if you start now: <strong>' + h(U.clock(plan.earliest, now)) + '</strong>.</p>';
+        html += '<p class="warnbox">That time is too soon. Earliest if you start now: <strong>' + h(U.clock(plan.earliest, now)) + '</strong>.</p>';
       } else {
-        html += '<p>Start the run (prepare the tree) at <strong>' + h(U.clock(plan.startAt, now)) + '</strong>. Start investing by <strong>' + h(U.clock(plan.investAt, now)) + '</strong>. Flask into the kiln by <strong>' + h(U.clock(plan.kilnStartAt, now)) + '</strong>.</p>' +
+        html += '<p>' + h(aName) + ': <strong>' + h(U.clock(a.start, now)) + '</strong> – <strong>' + h(U.clock(a.end, now)) + '</strong>. Ready to cast about <strong>' + h(U.clock(plan.castAt, now)) + '</strong>.</p>' +
+          '<p>Start the run (prepare the tree) at <strong>' + h(U.clock(plan.startAt, now)) + '</strong>. Start investing by <strong>' + h(U.clock(plan.investAt, now)) + '</strong>. Flask into the kiln by <strong>' + h(U.clock(plan.kilnStartAt, now)) + '</strong>.</p>' +
           '<p>Start in: <strong class="mono">' + c.L('planStartIn', U.hms(Math.max(0, plan.startAt - now))) + '</strong></p>';
       }
     } else {
       html += '<h1>Run not started</h1><p>Check the values for this casting on the RUN screen, or plan backwards from a casting time. Then start.</p>';
     }
-    html += btn('startRun', 'START RUN NOW', 'primary xl') + '<div class="row2">' + btn('nav', 'Edit run values', 'ghost', 'run') + btn('planOpen', 'Plan from casting time', 'ghost') + '</div>' + '</section>';
+    html += btn('startRun', 'START RUN NOW', 'primary xl') + '<div class="row2">' + btn('nav', 'Edit run values', 'ghost', 'run') + btn('planOpen', 'Plan the timeline', 'ghost') + '</div>' + '</section>';
     html += safetyCard(run.profile, true);
     return html;
   }
