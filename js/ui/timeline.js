@@ -25,8 +25,9 @@
     if (flask.index >= 0) html += '<div><span class="k">Flask ready</span><span class="v">' + (flask.done ? '✓' : h(U.clock(metal.soakReadyAt, now)) + (metal.estimated ? ' <em>est.</em>' : '')) + '</span></div>';
     if (metal.status === 'idle' && metal.recommendedStart && !metal.poured) html += '<div><span class="k">Start ' + h(metal.name) + ' furnace</span><span class="v">' + h(U.clock(metal.recommendedStart, now)) + (metal.estimated ? ' <em>est.</em>' : '') + '</span></div>';
     if (castRow && castRow.status !== 'done') html += '<div><span class="k">Ready to cast</span><span class="v">' + h(U.clock(castRow.start, now)) + ' <em>est.</em></span></div>';
-    if (run.plan && run.plan.castAt) html += '<div><span class="k">Planned casting time</span><span class="v">' + h(U.clock(run.plan.castAt, now)) + '</span></div>';
-    html += '<div class="row2">' + btn('exportIcs', '📅 Add alarms to calendar', 'ghost') + (run.status === 'draft' ? btn('planOpen', 'Plan from casting time', 'ghost') : '') + '</div>';
+    const pl = E.planOf(run.profile, run.plan);
+    if (pl) html += '<div><span class="k">' + (pl.locked ? '🔒 ' : '') + 'Plan: ' + h(run.profile.stages[pl.index].short || run.profile.stages[pl.index].name) + ' ' + (pl.edge === 'end' ? 'ends' : 'starts') + '</span><span class="v">' + h(U.clock(pl.at, now)) + '</span></div>';
+    html += '<div class="row2">' + btn('exportIcs', '📅 Add alarms to calendar', 'ghost') + (run.status === 'draft' ? btn('planOpen', 'Plan the timeline', 'ghost') : '') + '</div>';
     html += '<p class="hint">Calendar alarms ring even when this page is asleep — use them for overnight burnouts.</p></section>';
 
     let phase = null;

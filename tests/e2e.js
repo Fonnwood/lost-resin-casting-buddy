@@ -41,9 +41,16 @@ const MIN = 60000;
   await expectText('260 ml');
   await shot('run-view-draft');
 
-  // Plan backwards from tomorrow 09:00
-  await tap('Tomorrow 09:00');
-  await expectText('Flask into kiln');
+  // Plan around the bench rest starting at 15:45 today (defaults to the rest stage), then lock it in
+  await page.locator('input[data-bind="run|plan.at"]').fill('2026-09-27T15:45');
+  await page.locator('input[data-bind="run|plan.at"]').dispatchEvent('change');
+  await page.waitForTimeout(50);
+  await expectText('Flask ready · cast');
+  await expectText('Lock in this plan');
+  await shot('plan-bench-rest');
+  await tap('Lock in this plan');
+  await expectText('Locked in');
+  await shot('plan-locked');
   await tap('START RUN NOW');
   await expectText('WHAT TO DO NOW');
   await shot('now-prepare-tree');

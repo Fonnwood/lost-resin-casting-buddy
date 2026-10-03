@@ -171,13 +171,13 @@
       rows.push(row);
     }
 
-    // A draft run with a target casting time is planned backwards from it.
-    if (run.status === 'draft' && run.plan && run.plan.castAt) {
-      const ci = planAnchorIndex(run.profile);
-      if (ci >= 0) {
-        const shift = run.plan.castAt - rows[ci].start;
-        rows.forEach((row) => { row.start += shift; row.end += shift; row.scheduledEnd += shift; });
-      }
+    // A draft run with a plan is laid out around its anchor: the chosen stage
+    // starts (or ends) at the chosen time and everything else follows.
+    const plan = run.status === 'draft' ? planOf(run.profile, run.plan) : null;
+    if (plan) {
+      const anchor = rows[plan.index];
+      const shift = plan.at - (plan.edge === 'end' ? anchor.end : anchor.start);
+      rows.forEach((row) => { row.start += shift; row.end += shift; row.scheduledEnd += shift; });
     }
 
     return { rows, cur, facts, runtime: info, now };
@@ -192,6 +192,35 @@
   function planAnchorIndex(profile) {
     const i = profile.stages.findIndex((s) => s.role === 'cast_prep');
     return i >= 0 ? i : castIndex(profile);
+  }
+
+  /** The milestone offered first in the planner: the flask's rest/set period, else ready-to-cast. */
+  function defaultPlanIndex(profile) {
+    const i = profile.stages.findIndex((s) => s.role === 'set');
+    return i >= 0 ? i : planAnchorIndex(profile);
+  }
+
+  /**
+   * Normalise a run's plan: `{ stageId, edge: 'start'|'end', at, locked }`.
+   * Any stage can be the anchor. Plans saved by older versions
+   * (`{ castAt }`) anchor on the start of the "ready to cast" stage.
+   * Returns null if there is no usable plan; otherwise adds `index`.
+   */
+  function planOf(profile, plan) {
+    if (!plan) return null;
+    let stageId = plan.stageId;
+    let edge = plan.edge === 'end' ? 'end' : 'start';
+    let at = plan.at;
+    if (at == null && plan.castAt != null) { at = plan.castAt; stageId = null; edge = 'start'; }
+    if (at == null || !isFinite(at)) return null;
+    let index = stageId ? profile.stages.findIndex((s) => s.id === stageId) : -1;
+    if (index < 0) {
+      // Legacy plans anchor on "ready to cast"; a new plan with no stage chosen yet on the rest.
+      index = plan.castAt != null ? planAnchorIndex(profile) : defaultPlanIndex(profile);
+      if (plan.castAt != null) edge = 'start';
+    }
+    if (index < 0) return null;
+    return { stageId: profile.stages[index].id, edge, at, index, locked: !!plan.locked };
   }
 
   function indexOfRole(profile, role) { return profile.stages.findIndex((s) => s.role === role); }
@@ -607,27 +636,33 @@
   // ------------------------------------------------------------ planning
 
   /**
-   * Plan backwards from a desired casting time (spec §30).
-   * Returns the planned rows plus key clock times and the earliest casting
-   * time achievable if you started now.
+   * Plan a draft run around any milestone (spec §30): `anchor` is
+   * `{ stageId, edge: 'start'|'end', at }`. Every other stage is laid out
+   * before and after it using the current durations.
+   * Returns the planned rows plus key clock times, and the earliest time the
+   * anchor could happen if the run started now (`tooLate` when `at` is sooner).
    */
-  function planFromCastTime(profile, values, castAt, now) {
+  function planAround(profile, values, anchor, now) {
     const draft = newRun(profile, now);
     draft.values = Object.assign(draft.values, values || {});
+    const plan = planOf(profile, anchor);
     const forward = schedule(draft, now);
-    const ci = planAnchorIndex(profile);
-    const earliest = forward.rows[ci].start;
-    draft.plan = { castAt };
+    const fRow = forward.rows[plan.index];
+    const earliest = plan.edge === 'end' ? fRow.end : fRow.start;
+    draft.plan = { stageId: plan.stageId, edge: plan.edge, at: plan.at };
     const planned = schedule(draft, now);
     const rowByRole = (role) => planned.rows.find((r) => r.stage.role === role);
     const metal = metalInfo(draft, planned, now);
     const kiln = rowByRole('kiln_start');
     const soak = rowByRole('soak');
+    const castRow = planned.rows[planAnchorIndex(profile)];
     return {
       rows: planned.rows,
-      castAt,
+      anchor: plan,
+      at: plan.at,
+      castAt: castRow.start,
       earliest,
-      tooLate: castAt < earliest,
+      tooLate: plan.at < earliest,
       startAt: planned.rows[0].start,
       investAt: (rowByRole('measure') || planned.rows[0]).start,
       kilnStartAt: kiln ? kiln.end : null,
@@ -635,6 +670,11 @@
       flaskReadyAt: soak ? soak.end : null,
       metalStartAt: metal.recommendedStart,
     };
+  }
+
+  /** Plan backwards from a desired casting time (the "ready to cast" stage). */
+  function planFromCastTime(profile, values, castAt, now) {
+    return planAround(profile, values, { stageId: profile.stages[planAnchorIndex(profile)].id, edge: 'start', at: castAt }, now);
   }
 
   // -------------------------------------------------------------- history
@@ -797,10 +837,10 @@
 
   CPT.Engine = {
     TIMER_TYPES, CAST_STEPS, MARK_LABELS, ALERT_PREFS, ALERT_STALE_MS,
-    hasTimer, minutesOf, newRun, runtime, plannedEnd, currentIndex, schedule, castIndex, planAnchorIndex, indexOfRole,
+    hasTimer, minutesOf, newRun, runtime, plannedEnd, currentIndex, schedule, castIndex, planAnchorIndex, defaultPlanIndex, planOf, indexOfRole,
     startRun, completeCurrent, restartCurrent, skipCurrent, backOne, extend, pause, resume, kilnSync, advance, metalStart, metalReady, metalReset,
     confirmFlask, mark, logEdit, completeRun, abandonRun, undoable, undo, refreshStatus,
     flaskInfo, metalInfo, runState, stageEvents, alertCandidates, dueAlerts, markAlerts, attention, stageEndText,
-    planFromCastTime, waterMl, calculator, METALS, METAL_CALC_DEFAULTS, metalCalc, deviations, record, calendar,
+    planAround, planFromCastTime, waterMl, calculator, METALS, METAL_CALC_DEFAULTS, metalCalc, deviations, record, calendar,
   };
 })(globalThis.CPT = globalThis.CPT || {});

@@ -61,7 +61,7 @@
         body = '<h2>' + h(m.title) + '</h2><p>' + h(m.text) + '</p><div class="row2">' + btn('confirmYes', h(m.yes || 'Yes'), 'danger xl') + btn('closeModal', 'Cancel', 'ghost') + '</div>';
         break;
       case 'plan':
-        body = '<h2>Plan from casting time</h2>' + (run ? planBlock(run, now) : '') + '<div class="row2">' + btn('closeModal', 'Done', 'primary') + '</div>';
+        body = '<h2>Plan the timeline</h2>' + (run ? planBlock(run, now) : '') + '<div class="row2">' + btn('closeModal', 'Done', 'primary') + '</div>';
         break;
       case 'safety':
         body = '<h2>⚠ Before you start</h2><ul class="safety-list">' + P.safetyNotes(run && run.profile).map((n) => '<li>' + h(n) + '</li>').join('') + '</ul>' + btn('safetyAck', 'I UNDERSTAND', 'primary xl');
