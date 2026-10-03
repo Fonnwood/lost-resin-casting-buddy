@@ -10,6 +10,7 @@
   const S = CPT.Storage;
   const A = CPT.Alerts;
   const Y = CPT.Sync;
+  const N = CPT.Push;
   const UI = CPT.UI;
 
   CPT.VERSION = '1.0.0';
@@ -81,6 +82,18 @@
   }
   function saveProfiles() { S.saveProfiles(app.profiles); }
   function saveSettings() { S.saveSettings(app.settings); }
+
+  /** Upcoming alerts for the push server: the active run's, as enabled in Settings, in the user's units. */
+  function pushAlertList() {
+    const run = app.activeRun();
+    const prefs = app.settings.alerts;
+    if (!run || run.status !== 'active' || !prefs.enabled) return [];
+    const now = Date.now();
+    return E.pushAlerts(run, now)
+      .filter((a) => prefs.prefs[a.pref] !== false && a.at < now + 70 * 3600000)
+      .slice(0, 60)
+      .map((a) => ({ key: a.key, at: a.at, title: U.localiseTemps(a.title), body: U.localiseTemps(a.body || '') || run.name }));
+  }
 
   /** Browser storage changed underneath us (another tab, or account sync): reload and redraw. */
   function reloadFromStorage() {
@@ -603,6 +616,15 @@
     stageMove: (arg) => editProfile((p) => { const [i, d] = arg.split(':').map(Number); const j = i + d; if (j < 0 || j >= p.stages.length) return; const s = p.stages.splice(i, 1)[0]; p.stages.splice(j, 0, s); }),
     stageInsert: (arg) => editProfile((p) => { const i = Number(arg); p.stages.splice(i + 1, 0, P.stage({ id: U.uid('stage'), name: 'New stage', phase: (p.stages[i] || {}).phase || 'burnout', type: 'timed', minutes: 10, provenance: { duration: 'working' } })); }),
     stageDelete: (arg) => openModal({ type: 'confirm', title: 'Delete stage?', text: 'Remove this stage from the profile.', yes: 'Delete', onYes: () => editProfile((p) => { if (p.stages.length > 1) p.stages.splice(Number(arg), 1); }) }),
+    pushOn: async () => {
+      A.unlockAudio();
+      try {
+        await N.enable();
+        toast('Notifications on. They’ll arrive even with the app closed or the phone locked.');
+      } catch (err) { toast(err.message); }
+      render(true);
+    },
+    pushOff: async () => { await N.disable(); toast('Notifications from the server are off on this device.'); render(true); },
     signIn: () => openModal({ type: 'signIn', step: 'email', email: (Y.status.email || '') }),
     signInBack: () => openModal({ type: 'signIn', step: 'email', email: app.modal && app.modal.email }),
     signInSend: () => signInStep(async (m, typed) => {
@@ -799,6 +821,15 @@
 
     // Optional accounts: only where the host serves /api (see docs/HOSTING.md).
     let layout = null;
+    // Push notifications: offered where the host has keys for them (announced by /api/session).
+    let pushShown = null;
+    const startPush = () => N.init(Y.status.pushKey, {
+      alerts: pushAlertList,
+      onStatus: (st) => {
+        const now = JSON.stringify(st);
+        if (now !== pushShown) { pushShown = now; render(true); }
+      },
+    });
     Y.init({
       onRemoteChange: reloadFromStorage,
       onStatus: (st) => {
@@ -808,7 +839,7 @@
         render(layout !== now);
         layout = now;
       },
-    });
+    }).then(startPush, startPush);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -32,6 +32,7 @@
     available: false,   // this host supports accounts
     email: null,        // signed-in address
     sessionDays: 30,
+    pushKey: null,      // this host can send push notifications (VAPID public key)
     syncing: false,
     lastSyncAt: null,
     error: null,
@@ -43,6 +44,7 @@
   let running = null;
   let again = null;
   let lastPull = 0;
+  let hooked = false;
 
   // ------------------------------------------------------------ helpers
 
@@ -314,7 +316,7 @@
 
   async function init(h) {
     hooks = h || {};
-    S.onWrite = schedule;
+    if (!hooked) { S.onWrite(schedule); hooked = true; }
     const cfg = CPT.config || {};
     const web = typeof location !== 'undefined' && /^https?:$/.test(location.protocol);
     if (cfg.accounts === false || typeof fetch !== 'function' || !web) { status.checked = true; notify(); return; }
@@ -322,6 +324,7 @@
       const r = await call('session');
       status.available = r.accounts === true;
       status.email = status.available ? r.email || null : null;
+      status.pushKey = r.pushKey || null;
       if (r.sessionDays) status.sessionDays = r.sessionDays;
     } catch (err) {
       // No network: a device that was signed in carries on and syncs later.

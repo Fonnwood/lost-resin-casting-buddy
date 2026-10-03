@@ -28,11 +28,26 @@
     return '<span class="prov prov-' + h(type) + '" title="' + h(P.SOURCE_TYPES[type] || type) + '">' + (PROV_ICON[type] || '') + ' ' + h((what ? what + ': ' : '') + (P.SOURCE_TYPES[type] || type)) + '</span>';
   }
 
+  /** A nudge to turn on push notifications, where offered and not yet on (or how to get them on iPhone). */
+  function pushNudge() {
+    const N = CPT.Push;
+    if (!N) return '';
+    if (N.status.available && !N.status.enabled) {
+      return '<p class="hint center">Phone asleep during the burnout? ' + btn('pushOn', '🔔 Turn on notifications', 'ghost small') + '</p>';
+    }
+    if (!N.status.available && N.needsInstall() && CPT.Sync && CPT.Sync.status.pushKey) {
+      return '<p class="hint center">For alerts while your iPhone is locked, add the app to your Home Screen (Share → Add to Home Screen) and open it from there.</p>';
+    }
+    return '';
+  }
+
   /** "Free and open source" note with a link to the code (config.sourceUrl). */
   function openSourceNote(cls) {
     const url = (CPT.config && CPT.config.sourceUrl) || '';
     const link = /^https?:\/\//.test(url) ? ' <a href="' + h(url) + '" target="_blank" rel="noopener">' + (/github\.com/.test(url) ? 'Source code on GitHub' : 'Source code') + '</a>' : '';
-    return '<p class="' + (cls || 'hint') + '">Free and open source (MIT licence).' + link + '</p>';
+    const by = (CPT.config && CPT.config.by) || {};
+    const maker = by.name ? ' by ' + (/^https?:\/\//.test(by.url || '') ? '<a href="' + h(by.url) + '" target="_blank" rel="noopener">' + h(by.name) + '</a>' : h(by.name)) : '';
+    return '<p class="' + (cls || 'hint') + '">Free and open source (MIT licence)' + maker + '.' + link + '</p>';
   }
 
   function btn(action, label, cls, arg, attrs) {
@@ -311,5 +326,5 @@
   }
 
   CPT.UI = CPT.UI || {};
-  CPT.UI.lib = { ctx, prov, btn, openSourceNote, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, field, numInput, paramField, toggle, select, provSelect, kv, safetyCard, defaultProfileOf, resultForm, planBlock };
+  CPT.UI.lib = { ctx, prov, btn, openSourceNote, pushNudge, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, field, numInput, paramField, toggle, select, provSelect, kv, safetyCard, defaultProfileOf, resultForm, planBlock };
 })(globalThis.CPT = globalThis.CPT || {});

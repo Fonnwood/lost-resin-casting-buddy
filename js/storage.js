@@ -5,7 +5,8 @@
   'use strict';
 
   const PREFIX = 'cpt.v1.';
-  const KEYS = { profiles: 'profiles', runs: 'runs', activeRunId: 'activeRunId', settings: 'settings', sync: 'sync' };
+  const KEYS = { profiles: 'profiles', runs: 'runs', activeRunId: 'activeRunId', settings: 'settings', sync: 'sync', push: 'push' };
+  const listeners = [];
 
   const DEFAULT_SETTINGS = {
     theme: 'dark',
@@ -47,9 +48,9 @@
       console.error('Storage write failed', e);
       return false;
     }
-    // Let account sync (js/sync.js) know the user's data changed.
-    if (key !== KEYS.sync && Storage.onWrite) {
-      try { Storage.onWrite(key); } catch (e) { console.error(e); }
+    // Let account sync and push notifications know the user's data changed.
+    if (key !== KEYS.sync && key !== KEYS.push) {
+      listeners.forEach((fn) => { try { fn(key); } catch (e) { console.error(e); } });
     }
     return true;
   }
@@ -88,8 +89,11 @@
     saveSyncState(s) { return write(KEYS.sync, s); },
     /** Forget everything on this device (used by “sign out and remove data”). */
     clearAll() { Object.keys(KEYS).forEach((k) => remove(KEYS[k])); },
-    /** Called after every data write; set by js/sync.js. */
-    onWrite: null,
+    /** This device's push-notification state (never synced). */
+    loadPushState() { const s = read(KEYS.push, null); return s && typeof s === 'object' ? s : {}; },
+    savePushState(s) { return write(KEYS.push, s); },
+    /** Call `fn(key)` after every write of the user's data (used by js/sync.js and js/push.js). */
+    onWrite(fn) { listeners.push(fn); },
     /** Ask the browser not to evict our data (best effort). */
     requestPersistence() {
       try {

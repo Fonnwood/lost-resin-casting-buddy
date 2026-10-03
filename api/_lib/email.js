@@ -8,14 +8,21 @@ const { HttpError } = require('./http');
 /** Last few dev-mode messages, read by scripts/serve.js for tests. */
 const outbox = [];
 
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
 function message(code) {
   const name = config.appName;
   const mins = config.codeMinutes;
+  const by = config.appBy;
+  const url = /^https?:\/\//.test(config.appByUrl) ? config.appByUrl : '';
+  const footText = by ? '\n—\n' + name + ', a free, open-source app by ' + by + (url ? ' · ' + url : '') + '\n' : '';
+  const footHtml = by ? '<p style="color:#888;font-size:12px;margin-top:24px">' + esc(name) + ', a free, open-source app by ' +
+    (url ? '<a href="' + esc(url) + '" style="color:#888">' + esc(by) + '</a>' : esc(by)) + '</p>' : '';
   return {
     subject: code + ' is your ' + name + ' sign-in code',
-    text: 'Your ' + name + ' sign-in code is ' + code + '.\n\nIt expires in ' + mins + ' minutes. If you didn’t ask for it, you can ignore this email.\n',
-    html: '<p>Your ' + name + ' sign-in code is</p><p style="font-size:28px;font-weight:700;letter-spacing:4px;font-family:monospace">' + code + '</p>' +
-      '<p>It expires in ' + mins + ' minutes. If you didn’t ask for it, you can ignore this email.</p>',
+    text: 'Your ' + name + ' sign-in code is ' + code + '.\n\nIt expires in ' + mins + ' minutes. If you didn’t ask for it, you can ignore this email.\n' + footText,
+    html: '<p>Your ' + esc(name) + ' sign-in code is</p><p style="font-size:28px;font-weight:700;letter-spacing:4px;font-family:monospace">' + code + '</p>' +
+      '<p>It expires in ' + mins + ' minutes. If you didn’t ask for it, you can ignore this email.</p>' + footHtml,
   };
 }
 
@@ -42,4 +49,4 @@ async function sendCode(to, code) {
   throw new HttpError(503, 'Email sending is not configured on this server (RESEND_API_KEY / EMAIL_FROM).');
 }
 
-module.exports = { sendCode, outbox };
+module.exports = { sendCode, outbox, message };

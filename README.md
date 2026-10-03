@@ -1,5 +1,7 @@
 # Lost Resin Casting Buddy
 
+*By [Fonnwood](https://fonnwood.com).*
+
 A mobile-first **process companion and timing dashboard** for vacuum-assisted investment casting of resin-printed models (lost-resin casting).
 
 At any moment it answers: **Where am I? What should I be doing now? What happens next, and when?**
@@ -18,6 +20,10 @@ At any moment it answers: **Where am I? What should I be doing now? What happens
 
 Open [castingbuddyapp.com](https://castingbuddyapp.com) on your phone. On iPhone, use **Share → Add to Home Screen**. That gives you offline use and notifications, and stops Safari clearing your data after 7 days without a visit. On Android, use **Install app** from the browser menu.
 
+### Notifications
+
+Turn them on in **Settings → Alerts → Turn on notifications** (or from the NOW screen). They arrive at each step even when the app is closed or the phone is locked: kiln stage ends through an overnight burnout, when to start the furnace, metal ready, soak complete. No account is needed. On iPhone and iPad, add the app to your Home Screen first and open it from there (iOS 16.4 or later). Each alert can be switched off individually, and **Add alarms to calendar** on the Timeline screen remains a good backup.
+
 ### Your data, with or without an account
 
 - **No account (the default):** everything stays in your browser on that device. Nothing is sent anywhere. Use **Settings → Export full backup** now and then.
@@ -26,7 +32,11 @@ Open [castingbuddyapp.com](https://castingbuddyapp.com) on your phone. On iPhone
 
 ### Privacy
 
-Without an account, castingbuddyapp.com never sees your data. With an account, the server stores your **email address** and your **casting data** (runs, profiles, settings), and nothing else: no name, no password, no IP addresses, no analytics or tracking. Sign-in codes and session tokens are stored only as one-way hashes. Emails are sent through [Resend](https://resend.com), the database is hosted by [Neon](https://neon.tech), and the site runs on [Vercel](https://vercel.com).
+Without an account, castingbuddyapp.com never sees your data. With an account, the server stores your **email address** and your **casting data** (runs, profiles, settings), and nothing else: no name, no password, no IP addresses, no analytics or tracking. Sign-in codes and session tokens are stored only as one-way hashes.
+
+If you turn on notifications, the server also keeps your device's push address (issued by your browser's push service, not linked to you or to an account) and the times and wording of your upcoming alerts, so it can send them. Turning notifications off deletes these. Unused push addresses are deleted after 30 days, and sent alerts after 2 days.
+
+Emails are sent through [Resend](https://resend.com), the database is hosted by [Neon](https://neon.tech), alert timing uses [Upstash QStash](https://upstash.com/docs/qstash), and the site runs on [Vercel](https://vercel.com).
 
 ## Run your own copy
 
@@ -47,7 +57,7 @@ To try accounts locally: `npm install && npm run dev`. This uses an in-memory da
 
 | Where | Accounts? | How |
 |---|---|---|
-| Vercel | Optional | Import the repo, add a Neon database and a Resend key. This is how castingbuddyapp.com runs. See [docs/HOSTING.md](docs/HOSTING.md). |
+| Vercel | Optional | Import the repo, add a Neon database and a Resend key (and QStash for notifications). This is how castingbuddyapp.com runs. See [docs/HOSTING.md](docs/HOSTING.md). |
 | Any Node 20+ server | Optional | `npm install`, then `DATABASE_URL=… RESEND_API_KEY=… EMAIL_FROM=… npm start` with any Postgres 13+ |
 | Docker | No | `docker build -f deploy/Dockerfile -t casting-buddy . && docker run -p 8080:80 casting-buddy` |
 | GitHub Pages | No | Settings → Pages → Source: GitHub Actions, then run the *Deploy to GitHub Pages* workflow |
@@ -73,7 +83,7 @@ Molten metal, hot flasks and vacuum equipment are dangerous. Some alloys (such a
 
 ## Credits and trademarks
 
-Bundled profile values reference public manufacturer datasheets (GRS Protocast) and community experience. GRS, Protocast, Siraya Tech, True Blue and other product names belong to their owners. This project is independent and not affiliated with or endorsed by them.
+Made by [Fonnwood](https://fonnwood.com). Bundled profile values reference public manufacturer datasheets (GRS Protocast) and community experience. GRS, Protocast, Siraya Tech, True Blue and other product names belong to their owners. This project is independent and not affiliated with or endorsed by them.
 
 ## Licence
 

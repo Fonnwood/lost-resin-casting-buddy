@@ -17,6 +17,7 @@ Casting Buddy is local-first: it works with no server at all, and every static h
 | `login_codes` | email, a hash of the code, attempts, expiry. Deleted after a day. |
 | `sessions` | a hash of the session token, the user, expiry |
 | `docs` | the user's casting data: one JSON document per run/profile, plus settings and which run is active |
+| `push_devices`, `push_alerts` | only for notifications: a device's push address and its upcoming alert times and wording. Not linked to accounts. |
 
 No names, no IP addresses, no analytics. Codes and session tokens are random, and only their SHA-256 hashes are kept.
 
@@ -33,6 +34,7 @@ No names, no IP addresses, no analytics. Codes and session tokens are random, an
    | `EMAIL_FROM` | e.g. `Casting Buddy <signin@yourdomain.com>` (must be on the verified domain) |
    | `APP_NAME` | optional; shown in the email (default `Casting Buddy`) |
    | `SESSION_DAYS` | optional; how long a sign-in lasts (default `30`) |
+| `APP_BY`, `APP_BY_URL` | optional; the "by …" credit at the foot of emails (default Fonnwood, `''` hides it) |
 
 5. **Add your domain.** *Settings → Domains → Add* and follow the DNS instructions.
 6. **Redeploy** (*Deployments → ⋯ → Redeploy*) so the new variables apply, then open the site → ⚙ Settings → **Account & sync → Sign in with email**.
@@ -41,6 +43,18 @@ Optional checks:
 
 - `npx vercel env pull .env.local && npm install && npm run db:setup` confirms the database connection and creates the tables.
 - `https://yourdomain/api/session` should return `{"accounts":true,"email":null,"sessionDays":30}`.
+
+### Notifications (push)
+
+These let alerts reach a phone that's asleep or has the app closed. They need no account, but they do need the database from step 2.
+
+1. **Create the keys.** Run `npx web-push generate-vapid-keys` on any computer with Node, then add the two values as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (Production and Preview). Keep the private key secret. If you change the keys later, people have to turn notifications on again.
+2. **Add the scheduler.** In the project: *Integrations → Browse Marketplace → Upstash → QStash → Install* (free plan) and connect it to the project. This sets `QSTASH_TOKEN`, `QSTASH_URL` and the two `QSTASH_*_SIGNING_KEY` variables. QStash calls the app back at each alert's exact time, which Vercel's own cron can't do on the free plan.
+3. **Redeploy.** The app then shows **Turn on notifications** in Settings → Alerts.
+
+Optional:
+- `APP_URL`: the site's public address (e.g. `https://castingbuddyapp.com`) for those callbacks. It defaults to the address the app was opened on. Set it if people use a Preview URL protected by Vercel Authentication, which QStash can't get through.
+- `CRON_SECRET`: lets any cron service call `GET /api/push/deliver` with `Authorization: Bearer <secret>` to send whatever is due. This is a safety net, or an alternative to QStash on a host that has a per-minute cron.
 
 ### Recommended: rate-limit the sign-in endpoint
 

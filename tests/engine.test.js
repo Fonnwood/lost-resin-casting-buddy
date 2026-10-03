@@ -578,3 +578,28 @@ test('metal calculator: blank, junk and unknown input is safe', () => {
   assert.equal(j.recommendedG, 0);
   assert.ok(j.others.length > 5);
 });
+
+test('push alerts: the whole kiln programme ahead, stopping at the first step that waits for you', () => {
+  const run = started();
+  advanceTo(run, 'set', T0);
+  let list = E.pushAlerts(run, T0);
+  assert.ok(list.some((a) => a.key === 'end:set'), 'current timed step');
+  assert.ok(!list.some((a) => a.key.startsWith('end:burnout')), 'kiln stages wait until the flask is in the kiln');
+
+  advanceTo(run, 'burnout_ramp_1', T0);
+  list = E.pushAlerts(run, T0);
+  const ends = list.filter((a) => a.key.startsWith('end:')).map((a) => a.key);
+  assert.deepEqual(ends, ['end:burnout_ramp_1', 'end:burnout_hold_1', 'end:burnout_ramp_2', 'end:burnout_hold_2', 'end:burnout_ramp_3', 'end:burnout_peak']);
+  const at = (k) => list.find((a) => a.key === k).at;
+  assert.equal(at('end:burnout_ramp_1'), T0 + 90 * MIN);
+  assert.equal(at('end:burnout_hold_1'), T0 + 270 * MIN);
+  assert.equal(at('end:burnout_peak'), T0 + 930 * MIN);
+  assert.ok(list.every((a, i) => i === 0 || list[i - 1].at <= a.at), 'in time order');
+  assert.ok(list.every((a) => a.title && a.pref), 'every alert has wording and a preference');
+  assert.ok(list.some((a) => a.key === 'metalNow'), 'furnace start is included');
+
+  // Later: what has already happened is no longer sent.
+  E.advance(run, T0 + 100 * MIN);
+  assert.ok(!E.pushAlerts(run, T0 + 100 * MIN).some((a) => a.key === 'end:burnout_ramp_1'));
+  assert.deepEqual(E.pushAlerts(E.newRun(P.builtIn(INITIAL), T0), T0), [], 'nothing for a draft');
+});

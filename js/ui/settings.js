@@ -15,12 +15,8 @@
     const s = app.settings;
     const A = CPT.Alerts;
     let html = '<section class="card"><h2>Alerts</h2>';
-    const perm = A.permission();
-    html += '<p>Notifications: <strong>' + h(perm) + '</strong></p>';
-    if (perm !== 'granted' && perm !== 'unsupported') html += btn('requestNotify', 'Enable notifications', 'primary');
-    if (perm === 'unsupported') html += '<p class="hint">This browser can’t show notifications here. On iPhone, add the app to your Home Screen first (Share → Add to Home Screen).</p>';
-    html += '<p class="warnbox">A sleeping phone cannot run web-page timers. For overnight burnouts, use <strong>Add alarms to calendar</strong> on the Timeline screen.</p>';
-    html += toggle('settings|alerts.enabled', s.alerts.enabled, 'All in-app alerts') + toggle('settings|alerts.sound', s.alerts.sound, 'Sound') + toggle('settings|alerts.vibrate', s.alerts.vibrate, 'Vibrate (where supported)');
+    html += pushBlock();
+    html += toggle('settings|alerts.enabled', s.alerts.enabled, 'All alerts') + toggle('settings|alerts.sound', s.alerts.sound, 'Sound') + toggle('settings|alerts.vibrate', s.alerts.vibrate, 'Vibrate (where supported)');
     html += '<div class="eyebrow">INDIVIDUAL ALERTS</div>';
     Object.keys(E.ALERT_PREFS).forEach((k) => { html += toggle('settings|alerts.prefs.' + k, s.alerts.prefs[k] !== false, E.ALERT_PREFS[k]); });
     html += btn('testAlert', 'Test alert', 'ghost') + '</section>';
@@ -60,6 +56,34 @@
     html += '<section class="card"><h2>About</h2><p>Lost Resin Casting Buddy v' + h(CPT.VERSION) + '. A process companion and timing dashboard — not a kiln controller.</p>' +
       openSourceNote('') + '<p class="hint">Bug reports, ideas and profiles for other materials are welcome there.</p></section>';
     return { html, live: c.live };
+  }
+
+  /** Notifications: push from the server where the host offers it, otherwise the page's own (open app only). */
+  function pushBlock() {
+    const A = CPT.Alerts;
+    const N = CPT.Push;
+    const st = N && N.status;
+    const calendar = 'For overnight burnouts, <strong>Add alarms to calendar</strong> on the Timeline screen is a good backup.';
+    if (st && st.available) {
+      if (st.enabled) {
+        return '<p class="okline">✓ <strong>Notifications on.</strong> Alerts arrive even when the app is closed or the phone is locked.</p>' +
+          (st.error ? '<p class="warnbox">' + h(st.error) + '</p>' : '') +
+          '<p class="hint">Switch individual alerts on or off below. ' + calendar + '</p>' +
+          btn('pushOff', 'Turn off notifications', 'ghost small', null, st.busy ? ' disabled' : '');
+      }
+      return '<p>Get alerts on this device even when the app is closed or the phone is locked — so an overnight burnout can wake you.</p>' +
+        (st.error ? '<p class="warnbox">' + h(st.error) + '</p>' : '') +
+        btn('pushOn', st.busy ? 'Turning on…' : 'Turn on notifications', 'primary', null, st.busy ? ' disabled' : '') +
+        '<p class="hint">No account needed. ' + calendar + '</p>';
+    }
+    if (N && N.needsInstall() && CPT.Sync && CPT.Sync.status.pushKey) {
+      return '<p class="warnbox">On iPhone and iPad, notifications need the app on your Home Screen: tap <strong>Share → Add to Home Screen</strong>, then open Casting Buddy from there and turn them on here.</p>';
+    }
+    const perm = A.permission();
+    let html = '<p>Notifications: <strong>' + h(perm) + '</strong></p>';
+    if (perm !== 'granted' && perm !== 'unsupported') html += btn('requestNotify', 'Enable notifications', 'primary');
+    if (perm === 'unsupported') html += '<p class="hint">This browser can’t show notifications here. On iPhone, add the app to your Home Screen first (Share → Add to Home Screen).</p>';
+    return html + '<p class="warnbox">A sleeping phone cannot run web-page timers. ' + calendar + '</p>';
   }
 
   /** Optional account & sync. Hidden entirely on hosts without accounts (static hosting, opened from disk). */

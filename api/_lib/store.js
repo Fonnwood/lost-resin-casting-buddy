@@ -14,7 +14,17 @@
  *   deleteUser(userId)                       (cascades to sessions and docs)
  *   liveDocCount(userId)
  *   sync(userId, since, changes, limits)     → { cursor, more, changes }
- *   cleanup(now)                             (drops expired codes and sessions)
+ *   cleanup(now)                             (drops expired codes and sessions, idle push devices)
+ *
+ * Push notifications (devices are anonymous — no account needed):
+ *   upsertPushDevice({ id, endpoint, p256dh, auth }, now)
+ *   pushDevice(id)                           → { id, endpoint, p256dh, auth, nextAt } | null
+ *   deletePushDevice(id)
+ *   replacePushAlerts(id, alerts)            (pending alerts replaced; ones already sent are never re-sent)
+ *   claimDueAlerts(id, until)                → [{ key, at, title, body }] marked sent, each returned once
+ *   nextAlertAt(id)                          → ms | null
+ *   setPushNextAt(id, at)
+ *   devicesWithDueAlerts(until)              → [id]
  */
 'use strict';
 

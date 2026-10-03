@@ -589,11 +589,12 @@
     return s.name + ' — time is up.';
   }
 
+  const prefFor = (s) => (s.role === 'soak' ? 'soakComplete' : s.role === 'post_pour_vacuum' ? 'vacuumComplete' : s.role === 'cooling' ? 'coolingComplete' : 'stageEnd');
+
   /** All alert moments for the run, fired or not. */
   function alertCandidates(run, sched, now) {
     const out = [];
     if (run.status !== 'active') return out;
-    const prefFor = (s) => (s.role === 'soak' ? 'soakComplete' : s.role === 'post_pour_vacuum' ? 'vacuumComplete' : s.role === 'cooling' ? 'coolingComplete' : 'stageEnd');
 
     sched.rows.forEach((row) => {
       const s = row.stage;
@@ -646,6 +647,30 @@
   }
 
   function markAlerts(run, alerts) { alerts.forEach((a) => { run.firedAlerts[a.key] = a.at; }); }
+
+  /**
+   * Upcoming alerts to hand to the push server, so they arrive while the
+   * phone sleeps: everything alertCandidates would fire later, plus the ends
+   * of kiln stages still to come — but only while every stage before them is
+   * a kiln programme step, because those advance on their own and their times
+   * are known. Anything after a stage that waits for the user is sent once
+   * the user gets there (the list is re-sent whenever the schedule changes).
+   */
+  function pushAlerts(run, now) {
+    if (!run || run.status !== 'active') return [];
+    const sched = schedule(run, now);
+    const out = alertCandidates(run, sched, now).filter((a) => a.at != null && a.at > now && !(run.firedAlerts[a.key] >= a.at));
+    const cur = sched.rows[sched.cur];
+    if (cur && cur.stage.control === 'kiln') {
+      for (let i = sched.cur + 1; i < sched.rows.length; i++) {
+        const row = sched.rows[i];
+        if (row.stage.control !== 'kiln') break;
+        if (!hasTimer(row.stage)) continue;
+        out.push({ key: 'end:' + row.stage.id, at: row.scheduledEnd, pref: prefFor(row.stage), title: stageEndText(run, row), body: '' });
+      }
+    }
+    return out.sort((a, b) => a.at - b.at);
+  }
 
   // ------------------------------------------------------- reopen / attention
 
@@ -874,7 +899,7 @@
     hasTimer, minutesOf, newRun, runtime, plannedEnd, currentIndex, schedule, castIndex, planAnchorIndex, defaultPlanIndex, planOf, indexOfRole,
     startRun, completeCurrent, restartCurrent, skipCurrent, backOne, extend, pause, resume, kilnSync, advance, metalStart, metalReady, metalReset,
     confirmFlask, mark, logEdit, completeRun, abandonRun, undoable, undo, refreshStatus,
-    flaskInfo, metalInfo, metalTrack, runState, stageEvents, alertCandidates, dueAlerts, markAlerts, attention, stageEndText,
+    flaskInfo, metalInfo, metalTrack, runState, stageEvents, alertCandidates, dueAlerts, markAlerts, pushAlerts, attention, stageEndText,
     planAround, planFromCastTime, waterMl, calculator, METALS, METAL_CALC_DEFAULTS, metalCalc, deviations, record, calendar,
   };
 })(globalThis.CPT = globalThis.CPT || {});

@@ -60,6 +60,12 @@ function isHttps(req) {
   return proto === 'https' || !!(req.socket && req.socket.encrypted);
 }
 
+/** This site's own origin, as the browser reached it. */
+function originOf(req) {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  return (isHttps(req) ? 'https' : 'http') + '://' + host;
+}
+
 /** Session cookie: HttpOnly, SameSite=Lax, Secure whenever served over HTTPS. */
 function sessionCookie(req, token, maxAgeSeconds) {
   return [
@@ -106,4 +112,4 @@ function handler(fn) {
   };
 }
 
-module.exports = { HttpError, send, readJson, parseCookies, sessionCookie, checkPost, handler, COOKIE };
+module.exports = { HttpError, send, readJson, parseCookies, sessionCookie, checkPost, handler, originOf, COOKIE };

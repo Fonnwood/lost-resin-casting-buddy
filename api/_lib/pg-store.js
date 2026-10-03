@@ -42,6 +42,25 @@ CREATE TABLE IF NOT EXISTS docs (
   PRIMARY KEY (user_id, kind, id)
 );
 CREATE INDEX IF NOT EXISTS docs_user_seq ON docs (user_id, seq);
+CREATE TABLE IF NOT EXISTS push_devices (
+  id         TEXT PRIMARY KEY,
+  endpoint   TEXT NOT NULL,
+  p256dh     TEXT NOT NULL,
+  auth       TEXT NOT NULL,
+  next_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS push_alerts (
+  device_id  TEXT NOT NULL REFERENCES push_devices (id) ON DELETE CASCADE,
+  key        TEXT NOT NULL,
+  at         TIMESTAMPTZ NOT NULL,
+  title      TEXT NOT NULL,
+  body       TEXT NOT NULL DEFAULT '',
+  sent_at    TIMESTAMPTZ,
+  PRIMARY KEY (device_id, key, at)
+);
+CREATE INDEX IF NOT EXISTS push_alerts_due ON push_alerts (at) WHERE sent_at IS NULL;
 `;
 
 const ms = (d) => (d == null ? null : new Date(d).getTime());
@@ -155,9 +174,57 @@ function create(connectionString) {
         throw err;
       } finally { c.release(); }
     },
+    async upsertPushDevice(d, now) {
+      await q(
+        `INSERT INTO push_devices (id, endpoint, p256dh, auth, updated_at) VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET endpoint = EXCLUDED.endpoint, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth, updated_at = EXCLUDED.updated_at`,
+        [d.id, d.endpoint, d.p256dh, d.auth, new Date(now)]);
+    },
+    async pushDevice(id) {
+      const { rows } = await q('SELECT id, endpoint, p256dh, auth, next_at FROM push_devices WHERE id = $1', [id]);
+      return rows[0] ? { id: rows[0].id, endpoint: rows[0].endpoint, p256dh: rows[0].p256dh, auth: rows[0].auth, nextAt: ms(rows[0].next_at) } : null;
+    },
+    async deletePushDevice(id) { await q('DELETE FROM push_devices WHERE id = $1', [id]); },
+    async replacePushAlerts(id, alerts) {
+      await migrate();
+      const c = await pool.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query('DELETE FROM push_alerts WHERE device_id = $1 AND sent_at IS NULL', [id]);
+        if (alerts.length) {
+          await c.query(
+            `INSERT INTO push_alerts (device_id, key, at, title, body)
+             SELECT $1, t.key, t.at, t.title, t.body
+               FROM unnest($2::text[], $3::timestamptz[], $4::text[], $5::text[]) AS t (key, at, title, body)
+             ON CONFLICT (device_id, key, at) DO NOTHING`,
+            [id, alerts.map((a) => a.key), alerts.map((a) => new Date(a.at)), alerts.map((a) => a.title), alerts.map((a) => a.body)]);
+        }
+        await c.query('COMMIT');
+      } catch (err) {
+        await c.query('ROLLBACK').catch(() => {});
+        throw err;
+      } finally { c.release(); }
+    },
+    async claimDueAlerts(id, until) {
+      const { rows } = await q(
+        'UPDATE push_alerts SET sent_at = now() WHERE device_id = $1 AND sent_at IS NULL AND at <= $2 RETURNING key, at, title, body',
+        [id, new Date(until)]);
+      return rows.map((r) => ({ key: r.key, at: ms(r.at), title: r.title, body: r.body })).sort((a, b) => a.at - b.at);
+    },
+    async nextAlertAt(id) {
+      const { rows } = await q('SELECT min(at) AS at FROM push_alerts WHERE device_id = $1 AND sent_at IS NULL', [id]);
+      return ms(rows[0].at);
+    },
+    async setPushNextAt(id, at) { await q('UPDATE push_devices SET next_at = $2 WHERE id = $1', [id, at == null ? null : new Date(at)]); },
+    async devicesWithDueAlerts(until) {
+      const { rows } = await q('SELECT DISTINCT device_id FROM push_alerts WHERE sent_at IS NULL AND at <= $1', [new Date(until)]);
+      return rows.map((r) => r.device_id);
+    },
     async cleanup(now) {
       await q('DELETE FROM login_codes WHERE created_at < $1', [new Date(now - 86400000)]);
       await q('DELETE FROM sessions WHERE expires_at <= $1', [new Date(now)]);
+      await q('DELETE FROM push_devices WHERE updated_at < $1', [new Date(now - 30 * 86400000)]);
+      await q('DELETE FROM push_alerts WHERE sent_at IS NOT NULL AND at < $1', [new Date(now - 2 * 86400000)]);
     },
   };
 }

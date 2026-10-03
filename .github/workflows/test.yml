@@ -40,8 +40,9 @@ jobs:
           npm start > /dev/null 2>&1 &
           timeout 10 sh -c 'until curl -sf http://localhost:8080/ > /dev/null; do sleep 0.2; done'
           npm run test:e2e -- http://localhost:8080
-      - name: End-to-end account sign-in and sync (two phones)
+      - name: End-to-end account sign-in and sync (two phones), and notifications
         run: |
           CODE_RESEND_SECONDS=2 node scripts/serve.js 8081 --dev > /dev/null 2>&1 &
           timeout 10 sh -c 'until curl -sf http://localhost:8081/ > /dev/null; do sleep 0.2; done'
           node tests/e2e-sync.js http://localhost:8081
+          node tests/e2e-push.js http://localhost:8081

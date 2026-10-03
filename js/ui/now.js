@@ -8,7 +8,7 @@
   const E = CPT.Engine;
   const h = U.esc;
   const MIN = U.MIN;
-  const { ctx, prov, btn, openSourceNote, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, safetyCard, defaultProfileOf, resultForm } = CPT.UI.lib;
+  const { ctx, prov, btn, openSourceNote, pushNudge, fill, textVars, stageTitle, describeStage, rampRate, checklist, checklistProgress, minLine, refLine, provRow, extendRow, kilnProgramBlock, safetyCard, defaultProfileOf, resultForm } = CPT.UI.lib;
 
   function renderNow(app, now) {
     const c = ctx();
@@ -54,6 +54,7 @@
     html += '<section class="card escape"><div class="eyebrow">TIMER STUCK OR WRONG?</div><div class="row3">' +
       btn('resetStage', '↺ Reset timer', 'ghost small') + btn('skipStage', 'Skip step →', 'ghost small') + (i > 0 ? btn('backStage', '← Previous step', 'ghost small') : '') +
       '</div></section>';
+    html += pushNudge();
     html += '<div class="footer-actions">' + (u ? btn('undo', '↶ Undo: ' + h(u.label), 'ghost small') : '') + btn('nav', 'Full timeline', 'ghost small', 'timeline') + '</div>';
     return { html, live: c.live };
   }
@@ -95,6 +96,7 @@
       html += '<h1>Run not started</h1><p>Check the values for this casting on the RUN screen, or plan backwards from a casting time. Then start.</p>';
     }
     html += btn('startRun', 'START RUN NOW', 'primary xl') + '<div class="row2">' + btn('nav', 'Edit run values', 'ghost', 'run') + btn('planOpen', 'Plan the timeline', 'ghost') + '</div>' + '</section>';
+    html += pushNudge();
     html += safetyCard(run.profile, true);
     return html;
   }

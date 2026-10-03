@@ -5,8 +5,13 @@
   "private": true,
   "license": "MIT",
   "type": "commonjs",
-  "engines": { "node": ">=20" },
-  "repository": { "type": "git", "url": "git+https://github.com/fonnwood/lost-resin-casting-buddy.git" },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fonnwood/lost-resin-casting-buddy.git"
+  },
   "scripts": {
     "start": "node scripts/serve.js",
     "start:lan": "node scripts/serve.js --host 0.0.0.0",
@@ -25,6 +30,7 @@
   },
   "dependencies": {
     "@vercel/functions": "^3.9.11",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "web-push": "^3.6.7"
   }
 }

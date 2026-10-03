@@ -40,11 +40,7 @@ function device(base) {
 
 const stores = [['memory', () => require('../api/_lib/memory-store').create()]];
 if (process.env.TEST_DATABASE_URL) {
-  stores.push(['postgres', async () => {
-    const s = require('../api/_lib/pg-store').create(process.env.TEST_DATABASE_URL);
-    await s.pool.query('DROP TABLE IF EXISTS docs, sessions, login_codes, users CASCADE; DROP SEQUENCE IF EXISTS doc_seq');
-    return s;
-  }]);
+  stores.push(['postgres', () => require('./pg-helper').freshPgStore('api_test')]);
 }
 
 for (const [name, makeStore] of stores) {
@@ -60,7 +56,9 @@ for (const [name, makeStore] of stores) {
 
     await t.test('session reports accounts available and signed out', async () => {
       const r = await device(base).call('/api/session');
-      assert.deepEqual(r.body, { accounts: true, email: null, sessionDays: 30 });
+      assert.equal(r.body.accounts, true);
+      assert.equal(r.body.email, null);
+      assert.equal(r.body.sessionDays, 30);
     });
 
     await t.test('sign in with an emailed code sets a 30-day HttpOnly cookie', async () => {

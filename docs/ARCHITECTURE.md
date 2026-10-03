@@ -11,12 +11,13 @@ profiles/*.js       profile packs registered with CPT.Profile.register
 js/engine.js        run event log → schedule, metal timing, alerts, back-planning, .ics export. No DOM.
 js/storage.js       localStorage behind a small interface (+ in-memory fallback)
 js/sync.js          optional account sync: pushes/pulls browser storage to /api (no DOM)
+js/push.js          optional push notifications: hands upcoming alerts to /api/push/schedule
 js/alerts.js        notifications, sound, vibration, wake lock, downloads
 js/ui/components.js shared HTML-string building blocks
 js/ui/{now,timeline,run,history,settings,modals}.js   one file per screen
 js/app.js           controller: state, actions, 1 s tick, input binding
 sw.js               offline cache (network-first; never caches /api)
-api/                optional server: Vercel Functions (Node, CommonJS) for sign-in and sync
+api/                optional server: Vercel Functions (Node, CommonJS) for sign-in, sync and push
 api/_lib/           shared server helpers; memory-store.js and pg-store.js share one interface
 ```
 

@@ -9,6 +9,8 @@ function create() {
   const codes = [];             // { id, email, hash, attempts, createdAt, expiresAt, usedAt }
   const sessions = new Map();   // hash → { userId, expiresAt }
   const docs = new Map();       // userId → Map(key → { kind, id, data, updatedAt, seq })
+  const pushDevices = new Map(); // id → { id, endpoint, p256dh, auth, nextAt, updatedAt }
+  const pushAlerts = new Map();  // id → [{ key, at, title, body, sentAt }]
   let nextId = 1;
   let seq = 0;
 
@@ -76,9 +78,35 @@ function create() {
       const after = [...mine.values()].filter((d) => d.seq > since).sort((a, b) => a.seq - b.seq);
       return page(after, rejected.map((k) => mine.get(k)), since, limits);
     },
+    async upsertPushDevice(d, now) {
+      const cur = pushDevices.get(d.id);
+      pushDevices.set(d.id, Object.assign({ nextAt: null }, cur, { id: d.id, endpoint: d.endpoint, p256dh: d.p256dh, auth: d.auth, updatedAt: now }));
+    },
+    async pushDevice(id) { const d = pushDevices.get(id); return d ? Object.assign({}, d) : null; },
+    async deletePushDevice(id) { pushDevices.delete(id); pushAlerts.delete(id); },
+    async replacePushAlerts(id, alerts) {
+      const sent = (pushAlerts.get(id) || []).filter((a) => a.sentAt != null);
+      const fresh = alerts.filter((a) => !sent.some((s) => s.key === a.key && s.at === a.at)).map((a) => Object.assign({}, a, { sentAt: null }));
+      pushAlerts.set(id, sent.concat(fresh));
+    },
+    async claimDueAlerts(id, until) {
+      const out = [];
+      (pushAlerts.get(id) || []).forEach((a) => { if (a.sentAt == null && a.at <= until) { a.sentAt = Date.now(); out.push({ key: a.key, at: a.at, title: a.title, body: a.body }); } });
+      return out.sort((a, b) => a.at - b.at);
+    },
+    async nextAlertAt(id) {
+      const pending = (pushAlerts.get(id) || []).filter((a) => a.sentAt == null).map((a) => a.at);
+      return pending.length ? Math.min(...pending) : null;
+    },
+    async setPushNextAt(id, at) { const d = pushDevices.get(id); if (d) d.nextAt = at; },
+    async devicesWithDueAlerts(until) {
+      return [...pushAlerts.entries()].filter(([, list]) => list.some((a) => a.sentAt == null && a.at <= until)).map(([id]) => id);
+    },
     async cleanup(now) {
       for (let i = codes.length - 1; i >= 0; i--) if (codes[i].createdAt < now - 24 * HOUR) codes.splice(i, 1);
       for (const [h, s] of sessions) if (s.expiresAt <= now) sessions.delete(h);
+      for (const [id, d] of pushDevices) if (d.updatedAt < now - 30 * 24 * HOUR) { pushDevices.delete(id); pushAlerts.delete(id); }
+      for (const list of pushAlerts.values()) for (let i = list.length - 1; i >= 0; i--) if (list[i].sentAt != null && list[i].at < now - 48 * HOUR) list.splice(i, 1);
     },
   };
 }
