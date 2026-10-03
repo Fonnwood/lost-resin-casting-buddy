@@ -411,11 +411,18 @@
       toast('+' + arg + ' min on “' + s.name + '”' + (s.control === 'kiln' ? ' — extend the kiln controller too.' : '.'));
     }),
     extendCustom: () => openModal({ type: 'extend' }),
-    applyExtend: () => {
-      const v = Number($('#ext-min').value);
+    // Minutes are entered unsigned and the button picks the direction: the iOS
+    // numeric keypad has no minus key.
+    applyExtend: (arg) => {
+      const v = Math.abs(Number($('#ext-min').value)) * (Number(arg) < 0 ? -1 : 1);
       closeModal();
       if (!v) return;
-      withRun((run, now) => { const s = run.profile.stages[E.currentIndex(run)]; if (s) E.extend(run, s.id, v, now); });
+      withRun((run, now) => {
+        const s = run.profile.stages[E.currentIndex(run)];
+        if (!s) return;
+        E.extend(run, s.id, v, now);
+        toast((v > 0 ? '+' : '−') + Math.abs(v) + ' min on “' + s.name + '”' + (s.control === 'kiln' ? ' — change the kiln controller too.' : '.'));
+      });
     },
     pause: () => withRun((run, now) => { const s = run.profile.stages[E.currentIndex(run)]; if (s) E.pause(run, s.id, now); }),
     resume: () => withRun((run, now) => { const s = run.profile.stages[E.currentIndex(run)]; if (s) E.resume(run, s.id, now); }),
