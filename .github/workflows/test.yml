@@ -20,8 +20,12 @@ jobs:
       - name: Unit tests
         run: npm test
       - name: End-to-end walk-through (phone-sized browser)
+        # The runner image already has Chromium's system libraries, so skip
+        # --with-deps (an apt update + install, ~20 s), and fetch only the
+        # headless shell the test launches, not the full browser. The server's
+        # output goes to /dev/null so the runner isn't left waiting on it.
         run: |
-          npx playwright install --with-deps chromium
-          npm start &
-          sleep 2
+          npx playwright install --only-shell chromium
+          npm start > /dev/null 2>&1 &
+          timeout 10 sh -c 'until curl -sf http://localhost:8080/ > /dev/null; do sleep 0.2; done'
           npm run test:e2e -- http://localhost:8080
