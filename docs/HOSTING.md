@@ -24,7 +24,7 @@ No names, no IP addresses, no analytics. Codes and session tokens are random, an
 ## Set up on Vercel (about 15 minutes)
 
 1. **Import the repo.** Vercel → *Add New → Project* → pick this GitHub repo. Framework preset: **Other**. Leave the build command and output directory empty. Deploy.
-2. **Add the database.** In the project: *Storage → Create Database → Neon (Serverless Postgres)*. The free plan is plenty. Connect it to the project for Production and Preview. This sets `DATABASE_URL`. The tables are created automatically on first use.
+2. **Add the database.** In the project: *Storage → Create Database → Neon (Serverless Postgres)*. Pick the region nearest your users, and set the same region for the app's server in `vercel.json` (`"regions"`; castingbuddyapp.com uses `lhr1`, London). Otherwise every database query crosses an ocean. The free plan is plenty. Connect it to the project for Production and Preview. This sets `DATABASE_URL`. The tables are created automatically on first use.
 3. **Set up email.** Create a free account at [resend.com](https://resend.com). Add and verify your domain (*Domains → Add*, then copy the DNS records it shows into your domain's DNS). Create an API key.
 4. **Add environment variables** (*Settings → Environment Variables*, Production and Preview):
 
