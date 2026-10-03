@@ -29,4 +29,10 @@ CPT.config = {
 
   /** Hide the built-in Protocast profiles (ship only your own, see profiles/). */
   hideBuiltInProfiles: false,
+
+  /** Optional accounts & sync (see docs/HOSTING.md). 'auto' offers sign-in only
+   *  where the server provides /api; false never shows it. */
+  accounts: 'auto',
+  /** Where the account API lives, relative to the page. */
+  apiBase: 'api',
 };

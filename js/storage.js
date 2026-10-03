@@ -5,7 +5,7 @@
   'use strict';
 
   const PREFIX = 'cpt.v1.';
-  const KEYS = { profiles: 'profiles', runs: 'runs', activeRunId: 'activeRunId', settings: 'settings' };
+  const KEYS = { profiles: 'profiles', runs: 'runs', activeRunId: 'activeRunId', settings: 'settings', sync: 'sync' };
 
   const DEFAULT_SETTINGS = {
     theme: 'dark',
@@ -43,11 +43,22 @@
     try {
       if (available) localStorage.setItem(PREFIX + key, raw);
       else memory[key] = raw;
-      return true;
     } catch (e) {
       console.error('Storage write failed', e);
       return false;
     }
+    // Let account sync (js/sync.js) know the user's data changed.
+    if (key !== KEYS.sync && Storage.onWrite) {
+      try { Storage.onWrite(key); } catch (e) { console.error(e); }
+    }
+    return true;
+  }
+
+  function remove(key) {
+    try {
+      if (available) localStorage.removeItem(PREFIX + key);
+      else delete memory[key];
+    } catch (e) { /* ignore */ }
   }
 
   const Storage = {
@@ -71,6 +82,14 @@
       return merged;
     },
     saveSettings(s) { return write(KEYS.settings, s); },
+    /** Settings exactly as saved (no defaults merged in), or null. */
+    loadStoredSettings() { const s = read(KEYS.settings, null); return s && typeof s === 'object' && !Array.isArray(s) ? s : null; },
+    loadSyncState() { return read(KEYS.sync, null); },
+    saveSyncState(s) { return write(KEYS.sync, s); },
+    /** Forget everything on this device (used by “sign out and remove data”). */
+    clearAll() { Object.keys(KEYS).forEach((k) => remove(KEYS[k])); },
+    /** Called after every data write; set by js/sync.js. */
+    onWrite: null,
     /** Ask the browser not to evict our data (best effort). */
     requestPersistence() {
       try {
@@ -79,6 +98,7 @@
       return Promise.resolve(false);
     },
     isStorageEvent(e) { return e && typeof e.key === 'string' && e.key.indexOf(PREFIX) === 0; },
+    isSyncStateEvent(e) { return e && e.key === PREFIX + KEYS.sync; },
     DEFAULT_SETTINGS,
   };
 

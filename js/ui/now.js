@@ -63,6 +63,10 @@
     let html = '<section class="card hero"><div class="eyebrow">NO ACTIVE CASTING RUN</div><h1>Ready when you are</h1>' +
       '<p>Start a run to track investing, burnout, flask soak, metal and pour from one screen.</p>' +
       btn('newRun', 'START NEW CASTING RUN', 'primary xl') + '</section>';
+    const st = CPT.Sync && CPT.Sync.status;
+    if (st && st.available && !st.email) {
+      html += '<p class="hint center">Using more than one device? ' + btn('signIn', 'Sign in to sync (optional)', 'ghost small') + '</p>';
+    }
     if (recent.length) {
       html += '<section class="card"><div class="eyebrow">RECENT RUNS</div>' + recent.map((r) => '<button type="button" class="listrow" data-action="historyOpen" data-arg="' + h(r.id) + '"><span>' + h(r.name) + '</span><span class="muted">' + (r.result && r.result.rating ? '★ ' + r.result.rating + '/5' : '') + '</span></button>').join('') + '</section>';
     }

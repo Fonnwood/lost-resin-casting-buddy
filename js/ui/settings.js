@@ -48,13 +48,43 @@
     });
     html += '<div class="row2">' + btn('profileNew', 'New blank profile', 'ghost') + '<label class="btn ghost file">Import profile<input type="file" accept="application/json,.json" data-action-change="importProfile" hidden></label></div></section>';
 
-    html += '<section class="card"><h2>Data & backup</h2><p class="hint">Everything is stored on this device only. Safari can clear website data you haven’t opened for 7 days — add the app to your Home Screen and export a backup regularly.</p>' +
+    html += accountCard(c);
+    const synced = CPT.Sync && CPT.Sync.status.email;
+    html += '<section class="card"><h2>Data & backup</h2><p class="hint">' + (synced
+      ? 'Stored on this device and synced to your account. A backup file is still a good idea before big changes.'
+      : 'Everything is stored on this device only. Safari can clear website data you haven’t opened for 7 days — add the app to your Home Screen and export a backup regularly.') + '</p>' +
       '<p>Storage: ' + (CPT.Storage.available ? 'browser storage' : '<strong>not available — data will be lost on reload</strong>') + (app.persisted ? ' · persistent ✓' : '') + '</p>' +
       '<div class="row2">' + btn('exportAll', 'Export full backup', 'ghost') + '<label class="btn ghost file">Restore backup<input type="file" accept="application/json,.json" data-action-change="importFile" hidden></label></div></section>';
 
     html += safetyCard(defaultProfileOf(app), false);
     html += '<section class="card"><h2>About</h2><p>Lost Resin Casting Buddy v' + h(CPT.VERSION) + '. A process companion and timing dashboard — not a kiln controller.</p></section>';
     return { html, live: c.live };
+  }
+
+  /** Optional account & sync. Hidden entirely on hosts without accounts (static hosting, opened from disk). */
+  function accountCard(c) {
+    const st = CPT.Sync && CPT.Sync.status;
+    if (!st || !st.available) return '';
+    let html = '<section class="card" id="account"><h2>Account & sync</h2>';
+    if (!st.email) {
+      html += '<p>Optional. Sign in with your email to keep your runs, profiles and settings in your account and pick them up on any device. Without an account everything stays on this device, as before.</p>' +
+        '<p class="hint">No password: we email you a code. We store only your email address and your casting data — no name, no tracking.</p>' +
+        (st.error ? '<p class="warnbox">' + h(st.error) + '</p>' : '') +
+        btn('signIn', 'Sign in with email', 'primary');
+      return html + '</section>';
+    }
+    let line;
+    if (st.syncing) line = 'Syncing…';
+    else if (st.error) line = st.error;
+    else if (st.lastSyncAt) line = 'Synced ' + U.clock(st.lastSyncAt, Date.now()) + '.';
+    else line = 'Not synced yet.';
+    html += '<p>Signed in as <strong>' + h(st.email) + '</strong></p>' +
+      '<p class="muted">' + c.L('syncStatus', line) + '</p>' +
+      '<p class="hint">Changes sync automatically. Text size and keep-screen-awake stay per device.</p>' +
+      '<div class="row2">' + btn('syncNow', 'Sync now', 'ghost') + btn('signOut', 'Sign out', 'ghost') + '</div>' +
+      '<details class="stage-editor"><summary>Delete account</summary><p class="hint">Removes your email address and all synced data from the server. Data on this device is kept.</p>' +
+      btn('deleteAccount', 'Delete account', 'danger small') + '</details>';
+    return html + '</section>';
   }
 
   function profileEditor(app) {

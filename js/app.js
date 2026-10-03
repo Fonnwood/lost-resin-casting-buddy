@@ -9,6 +9,7 @@
   const E = CPT.Engine;
   const S = CPT.Storage;
   const A = CPT.Alerts;
+  const Y = CPT.Sync;
   const UI = CPT.UI;
 
   CPT.VERSION = '1.0.0';
@@ -80,6 +81,15 @@
   }
   function saveProfiles() { S.saveProfiles(app.profiles); }
   function saveSettings() { S.saveSettings(app.settings); }
+
+  /** Browser storage changed underneath us (another tab, or account sync): reload and redraw. */
+  function reloadFromStorage() {
+    app.profiles = S.loadProfiles(); app.runs = S.loadRuns(); app.activeRunId = S.loadActiveRunId(); app.settings = S.loadSettings();
+    seedBuiltIns();
+    applyTheme();
+    render(true);
+    if (app.modal) renderModal();
+  }
 
   // -------------------------------------------------------------- render
 
@@ -221,6 +231,7 @@
 
   function tick() {
     try { tickRun(); } catch (err) { console.error(err); }
+    if (document.visibilityState === 'visible') Y.maybePull();
     try { render(false); } catch (err) { console.error(err); renderFailure(err); }
   }
 
@@ -585,9 +596,54 @@
     stageMove: (arg) => editProfile((p) => { const [i, d] = arg.split(':').map(Number); const j = i + d; if (j < 0 || j >= p.stages.length) return; const s = p.stages.splice(i, 1)[0]; p.stages.splice(j, 0, s); }),
     stageInsert: (arg) => editProfile((p) => { const i = Number(arg); p.stages.splice(i + 1, 0, P.stage({ id: U.uid('stage'), name: 'New stage', phase: (p.stages[i] || {}).phase || 'burnout', type: 'timed', minutes: 10, provenance: { duration: 'working' } })); }),
     stageDelete: (arg) => openModal({ type: 'confirm', title: 'Delete stage?', text: 'Remove this stage from the profile.', yes: 'Delete', onYes: () => editProfile((p) => { if (p.stages.length > 1) p.stages.splice(Number(arg), 1); }) }),
+    signIn: () => openModal({ type: 'signIn', step: 'email', email: (Y.status.email || '') }),
+    signInBack: () => openModal({ type: 'signIn', step: 'email', email: app.modal && app.modal.email }),
+    signInSend: () => signInStep(async (m, typed) => {
+      const email = (typed.email != null ? typed.email : m.email || '').trim();
+      if (!email) { m.error = 'Enter your email address.'; return; }
+      m.email = email;
+      await Y.requestCode(email);
+      app.modal = { type: 'signIn', step: 'code', email, sent: Date.now() };
+    }),
+    signInVerify: () => signInStep(async (m, typed) => {
+      const code = typed.code || '';
+      if (!/^\s*\d{6}\s*$/.test(code)) { m.error = 'Enter the 6-digit code from the email.'; return; }
+      await Y.verify(m.email, code.trim());
+      closeModal();
+      toast('Signed in as ' + Y.status.email + '. Your data is now synced.');
+      render(true);
+    }),
+    syncNow: () => Y.syncNow().then(() => toast(Y.status.error || 'Synced.')),
+    signOut: () => openModal({ type: 'signOut' }),
+    signOutKeep: () => accountStep(async () => { await Y.signOut(false); toast('Signed out. Your data stays on this device and in your account.'); }),
+    signOutClear: () => accountStep(async () => { await Y.signOut(true); location.reload(); }),
+    deleteAccount: () => openModal({
+      type: 'confirm', title: 'Delete your account?',
+      text: 'This permanently deletes your account, your email address and everything synced to it from the server. Data on this device is kept — export a backup first if you want a copy.',
+      yes: 'Delete account', onYes: () => accountStep(async () => { await Y.deleteAccount(); toast('Account deleted. Your data is still on this device.'); }),
+    }),
     eventAdd: (arg) => editProfile((p) => { const s = p.stages[Number(arg)]; s.events = s.events || []; s.events.push({ id: U.uid('ev'), trigger: 'before-end', offsetMinutes: 15, text: 'Reminder' }); }),
     eventDelete: (arg) => editProfile((p) => { const [i, j] = arg.split(':').map(Number); p.stages[i].events.splice(j, 1); }),
   };
+
+  /** Run one step of the sign-in dialog, showing progress and any error in it. */
+  async function signInStep(fn) {
+    const m = app.modal;
+    if (!m || m.type !== 'signIn' || m.busy) return;
+    // Read what was typed before the dialog redraws in its busy state.
+    const typed = { email: $('#si-email') ? $('#si-email').value : null, code: $('#si-code') ? $('#si-code').value : null };
+    m.busy = true; m.error = null;
+    renderModal();
+    try { await fn(m, typed); } catch (err) { m.error = err.message; if (err.data && err.data.expired) m.expired = true; }
+    m.busy = false;
+    if (app.modal) renderModal();
+  }
+
+  async function accountStep(fn) {
+    closeModal();
+    try { await fn(); } catch (err) { toast(err.status ? err.message : 'You’re offline — try again when connected.'); }
+    render(true);
+  }
 
   function editProfile(fn) {
     const p = app.profiles.find((x) => x.id === app.editProfileId);
@@ -713,14 +769,14 @@
     document.addEventListener('click', onClick);
     document.addEventListener('change', onChange);
     document.addEventListener('input', onInput);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && app.modal) closeModal(); });
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') markSeen(); else tick(); });
-    window.addEventListener('pagehide', markSeen);
-    window.addEventListener('storage', (e) => {
-      if (!S.isStorageEvent(e)) return;
-      app.profiles = S.loadProfiles(); app.runs = S.loadRuns(); app.activeRunId = S.loadActiveRunId(); app.settings = S.loadSettings();
-      render(true);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && app.modal) closeModal();
+      if (e.key === 'Enter' && e.target && (e.target.id === 'si-email' || e.target.id === 'si-code')) { e.preventDefault(); actions[e.target.id === 'si-email' ? 'signInSend' : 'signInVerify'](); }
     });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') markSeen(); else { tick(); Y.maybePull(true); } });
+    window.addEventListener('pagehide', markSeen);
+    window.addEventListener('online', () => Y.syncNow());
+    window.addEventListener('storage', (e) => { if (S.isStorageEvent(e) && !S.isSyncStateEvent(e)) reloadFromStorage(); });
     if (app.settings.wakeLock) A.setWakeLock(true);
     S.requestPersistence().then((p) => { app.persisted = !!p; });
 
@@ -733,6 +789,19 @@
     render(true);
     tick();
     setInterval(tick, 1000);
+
+    // Optional accounts: only where the host serves /api (see docs/HOSTING.md).
+    let layout = null;
+    Y.init({
+      onRemoteChange: reloadFromStorage,
+      onStatus: (st) => {
+        // Signing in or out changes the screen's layout; sync progress only updates text in place,
+        // so a half-typed field is never redrawn away.
+        const now = st.available + ':' + !!st.email;
+        render(layout !== now);
+        layout = now;
+      },
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

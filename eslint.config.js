@@ -17,7 +17,7 @@ module.exports = [
     languageOptions: { sourceType: 'script', globals: { ...globals.serviceworker } },
   },
   {
-    files: ['tests/**/*.js', 'scripts/**/*.js', 'eslint.config.js'],
+    files: ['tests/**/*.js', 'scripts/**/*.js', 'api/**/*.js', 'eslint.config.js'],
     languageOptions: { sourceType: 'commonjs', globals: { ...globals.node } },
     rules: { 'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none' }] },
   },

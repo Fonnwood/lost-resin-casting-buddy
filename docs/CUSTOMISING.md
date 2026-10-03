@@ -17,6 +17,7 @@ For a copy you run or host for others:
 | `profiles` | Extra profiles shown to everyone. |
 | `hideBuiltInProfiles` | Don't ship the Protocast examples. |
 | `customCssUrl` | A stylesheet loaded after the app's. |
+| `accounts` | `'auto'` (default) offers optional sign-in where the server provides `/api`; `false` hides it. See [HOSTING.md](HOSTING.md). |
 
 Also change `name`/`short_name` in `manifest.webmanifest` and the icons in `icons/` for a fully rebranded install.
 

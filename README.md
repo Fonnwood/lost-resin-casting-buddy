@@ -1,6 +1,6 @@
 # Lost Resin Casting Buddy
 
-A mobile-first **process companion and timing dashboard** for vacuum-assisted investment casting of resin-printed models (lost-resin casting). It runs entirely in your browser — no account, no server, no tracking.
+A mobile-first **process companion and timing dashboard** for vacuum-assisted investment casting of resin-printed models (lost-resin casting). It runs entirely in your browser — no account needed, no tracking. Hosted copies can offer an **optional account** (just an email and a code) to sync your runs across devices.
 
 At any moment it answers: **Where am I? What should I be doing now? What happens next, and when?**
 
@@ -25,7 +25,7 @@ npm run start:lan       # reachable from your phone on the same Wi-Fi
 
 or open `index.html` directly. Any static file server works. On iPhone use **Share → Add to Home Screen** for offline use, notifications, and storage that Safari won't evict. (Phones need HTTPS or `localhost` for the offline/PWA features; a LAN address over plain HTTP works for the app itself.)
 
-Your data lives in your browser's storage on that device — use **Settings → Export full backup** regularly.
+Your data lives in your browser's storage on that device — use **Settings → Export full backup** regularly, or sign in on a hosted copy to keep it in your account.
 
 ## Host it
 
@@ -35,9 +35,10 @@ It's a folder of static files, so anywhere works:
 |---|---|
 | Docker | `docker build -f deploy/Dockerfile -t casting-buddy . && docker run -p 8080:80 casting-buddy` |
 | GitHub Pages | Settings → Pages → Source: GitHub Actions, then run the *Deploy to GitHub Pages* workflow |
-| Vercel / Netlify / Cloudflare Pages / S3 | Publish the repo root as static files, no build command (`vercel.json` sets sensible headers) |
+| Vercel (with optional accounts) | Import the repo, add a Neon database and a Resend key — see [docs/HOSTING.md](docs/HOSTING.md) |
+| Netlify / Cloudflare Pages / S3 | Publish the repo root as static files, no build command |
 
-Everyone using a hosted copy keeps their own data in their own browser; the server never sees it. To rebrand or pre-load profiles, edit [`config.js`](config.js) — see [docs/CUSTOMISING.md](docs/CUSTOMISING.md).
+Without accounts, everyone keeps their own data in their own browser and the server never sees it. With accounts (Vercel or `npm start` with a Postgres `DATABASE_URL`), signed-in users' casting data and email address are stored on the server; nothing else is. `npm run dev` runs the whole thing locally with an in-memory database. To rebrand or pre-load profiles, edit [`config.js`](config.js) — see [docs/CUSTOMISING.md](docs/CUSTOMISING.md).
 
 ## Principles
 
