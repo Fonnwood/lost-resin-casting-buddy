@@ -18,7 +18,9 @@ jobs:
       - name: Assemble site
         run: |
           mkdir _site
-          cp -r index.html config.js sw.js manifest.webmanifest js css icons profiles _site/
+          cp -r index.html privacy.html config.js sw.js manifest.webmanifest js css icons profiles _site/
+          # Static hosting has no accounts: answer the app's check instead of a 404.
+          mkdir -p _site/api && echo '{"accounts":false}' > _site/api/session
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: _site }

@@ -5,7 +5,8 @@
   'use strict';
 
   const PREFIX = 'cpt.v1.';
-  const KEYS = { profiles: 'profiles', runs: 'runs', activeRunId: 'activeRunId', settings: 'settings' };
+  const KEYS = { profiles: 'profiles', runs: 'runs', activeRunId: 'activeRunId', settings: 'settings', sync: 'sync', push: 'push' };
+  const listeners = [];
 
   const DEFAULT_SETTINGS = {
     theme: 'dark',
@@ -43,11 +44,22 @@
     try {
       if (available) localStorage.setItem(PREFIX + key, raw);
       else memory[key] = raw;
-      return true;
     } catch (e) {
       console.error('Storage write failed', e);
       return false;
     }
+    // Let account sync and push notifications know the user's data changed.
+    if (key !== KEYS.sync && key !== KEYS.push) {
+      listeners.forEach((fn) => { try { fn(key); } catch (e) { console.error(e); } });
+    }
+    return true;
+  }
+
+  function remove(key) {
+    try {
+      if (available) localStorage.removeItem(PREFIX + key);
+      else delete memory[key];
+    } catch (e) { /* ignore */ }
   }
 
   const Storage = {
@@ -71,6 +83,17 @@
       return merged;
     },
     saveSettings(s) { return write(KEYS.settings, s); },
+    /** Settings exactly as saved (no defaults merged in), or null. */
+    loadStoredSettings() { const s = read(KEYS.settings, null); return s && typeof s === 'object' && !Array.isArray(s) ? s : null; },
+    loadSyncState() { return read(KEYS.sync, null); },
+    saveSyncState(s) { return write(KEYS.sync, s); },
+    /** Forget everything on this device (used by “sign out and remove data”). */
+    clearAll() { Object.keys(KEYS).forEach((k) => remove(KEYS[k])); },
+    /** This device's push-notification state (never synced). */
+    loadPushState() { const s = read(KEYS.push, null); return s && typeof s === 'object' ? s : {}; },
+    savePushState(s) { return write(KEYS.push, s); },
+    /** Call `fn(key)` after every write of the user's data (used by js/sync.js and js/push.js). */
+    onWrite(fn) { listeners.push(fn); },
     /** Ask the browser not to evict our data (best effort). */
     requestPersistence() {
       try {
@@ -79,6 +102,7 @@
       return Promise.resolve(false);
     },
     isStorageEvent(e) { return e && typeof e.key === 'string' && e.key.indexOf(PREFIX) === 0; },
+    isSyncStateEvent(e) { return e && e.key === PREFIX + KEYS.sync; },
     DEFAULT_SETTINGS,
   };
 

@@ -7,7 +7,7 @@
   const P = CPT.Profile;
   const E = CPT.Engine;
   const h = U.esc;
-  const { btn, field, planBlock } = CPT.UI.lib;
+  const { btn, field, planBlock, privacyLink } = CPT.UI.lib;
 
   function renderModal(app, now) {
     const m = app.modal;
@@ -63,6 +63,27 @@
         break;
       case 'plan':
         body = '<h2>Plan the timeline</h2>' + (run ? planBlock(run, now) : '') + '<div class="row2">' + btn('closeModal', 'Done', 'primary') + '</div>';
+        break;
+      case 'signIn': {
+        const err = m.error ? '<p class="warnbox" role="alert">' + h(m.error) + '</p>' : '';
+        const days = (CPT.Sync && CPT.Sync.status.sessionDays) || 30;
+        if (m.step === 'code') {
+          body = '<h2>Check your email</h2><p>We sent a 6-digit code to <strong>' + h(m.email) + '</strong>. It works for 10 minutes; if you asked more than once, use the newest.</p>' +
+            field('Sign-in code', '<input type="text" id="si-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="123456" aria-label="6-digit sign-in code">') + err +
+            '<div class="col">' + btn('signInVerify', m.busy ? 'Signing in…' : 'Sign in', 'primary xl', null, m.busy ? ' disabled' : '') +
+            '<div class="row2">' + btn('signInSend', m.expired ? 'Send a new code' : 'Resend code', 'ghost', null, m.busy ? ' disabled' : '') + btn('signInBack', 'Different email', 'ghost') + '</div></div>';
+        } else {
+          body = '<h2>Sign in or create an account</h2><p>Enter your email and we’ll send you a sign-in code — no password. New addresses get an account automatically.</p>' +
+            field('Email', '<input type="email" id="si-email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" value="' + h(m.email || '') + '">') + err +
+            '<div class="row2">' + btn('signInSend', m.busy ? 'Sending…' : 'Email me a code', 'primary xl', null, m.busy ? ' disabled' : '') + btn('closeModal', 'Cancel', 'ghost') + '</div>' +
+            '<p class="hint">You stay signed in on this device for ' + h(days) + ' days. We store only your email address and your casting data. ' + privacyLink('How we handle your data') + '</p>';
+        }
+        break;
+      }
+      case 'signOut':
+        body = '<h2>Sign out?</h2><p>Everything stays in your account. What should happen on this device?</p>' +
+          '<div class="col">' + btn('signOutKeep', 'Sign out — keep my data here', 'primary xl') + btn('signOutClear', 'Sign out and remove data from this device', 'danger') + btn('closeModal', 'Cancel', 'ghost') + '</div>' +
+          '<p class="hint">Remove it on a shared or borrowed device.</p>';
         break;
       case 'safety':
         body = '<h2>⚠ Before you start</h2><ul class="safety-list">' + P.safetyNotes(run && run.profile).map((n) => '<li>' + h(n) + '</li>').join('') + '</ul>' + btn('safetyAck', 'I UNDERSTAND', 'primary xl');

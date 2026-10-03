@@ -1,12 +1,12 @@
 # Security policy
 
-Casting Buddy is a static, client-side app: it has no server component and stores everything in the browser on the device that runs it.
+Casting Buddy is a client-side app that stores everything in the browser. Hosted copies can add an optional account API (`api/`): email sign-in codes, sessions and synced casting data in Postgres — see [docs/HOSTING.md](docs/HOSTING.md).
 
 ## Reporting a vulnerability
 
 Please report security problems privately through GitHub's **Security → Report a vulnerability** form on this repository rather than a public issue. Include steps to reproduce and the browser/version you used. You'll get an acknowledgement within a week.
 
-Things that count: script injection from imported files (profiles, runs, backups), anything that lets a hosted copy leak data between users, or a service-worker caching problem that serves stale or attacker-controlled code.
+Things that count: script injection from imported or synced data (profiles, runs, backups), anything that lets one account read or change another's data, sign-in bypass or code brute-forcing, session theft, or a service-worker caching problem that serves stale or attacker-controlled code.
 
 ## Not a safety system
 
