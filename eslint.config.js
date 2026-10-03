@@ -22,8 +22,8 @@ module.exports = [
     rules: { 'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none' }] },
   },
   {
-    // page.evaluate() callbacks in the e2e run inside the browser.
-    files: ['tests/e2e.js'],
+    // page.evaluate() / addInitScript() callbacks in the e2e tests run inside the browser.
+    files: ['tests/e2e*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 ];

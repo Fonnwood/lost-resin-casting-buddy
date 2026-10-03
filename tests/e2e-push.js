@@ -21,7 +21,7 @@ const SHOTS = process.argv[3] || null;
       endpoint: 'https://push.example/e2e-' + Math.random().toString(36).slice(2),
       options: { applicationServerKey: key },
       toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'B'.repeat(87), auth: 'A'.repeat(22) } }; },
-      unsubscribe: async () => { localStorage.removeItem('e2e.sub'); return true; },
+      unsubscribe: async () => true,
     });
     let sub = null;
     PushManager.prototype.getSubscription = async function () { return sub; };
